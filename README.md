@@ -40,4 +40,4 @@ go get github.com/gopherjs/gopherwasm
 ~/go-code/bin/go run github.com/hajimehoshi/wasmserve -tags=example
 ```
 
-And open `http://localhost:8080/github.com/hajimehoshi/ebiten/examples/sprites` on your browser.
+And open `http://localhost:8080/github.com/hajimehoshi/ebiten/examples/sprites/` on your browser.
