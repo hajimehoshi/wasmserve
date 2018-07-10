@@ -32,18 +32,20 @@ import (
 const indexHTML = `<!DOCTYPE html>
 <script src="wasm_exec.js"></script>
 <script>
-// Polyfill  
-if (!WebAssembly.instantiateStreaming) {
-  WebAssembly.instantiateStreaming = async (resp, importObject) => {
-    const source = await (await resp).arrayBuffer();
-    return await WebAssembly.instantiate(source, importObject);
-  };
-}
-
-const go = new Go();
-WebAssembly.instantiateStreaming(fetch("main.wasm"), go.importObject).then(result => {
-  go.run(result.instance);
-});
+(async () => {
+  const go = new Go();
+  const resp = await fetch("main.wasm");
+  if (resp.ok) {
+    const src = await resp.arrayBuffer();
+    WebAssembly.instantiate(src, go.importObject).then(result => {
+      go.run(result.instance);
+    });
+  } else {
+    const pre = document.createElement('pre');
+    pre.innerText = await resp.text();
+    document.body.appendChild(pre);
+  }
+})();
 </script>
 `
 
@@ -109,9 +111,9 @@ func handle(w http.ResponseWriter, r *http.Request) {
 			}
 			stderr, err := cmd.CombinedOutput()
 			if err != nil {
-				msg := fmt.Sprintf("%s\n%s", err.Error(), string(stderr))
+				log.Print(err)
 				log.Print(string(stderr))
-				http.Error(w, msg, http.StatusInternalServerError)
+				http.Error(w, string(stderr), http.StatusInternalServerError)
 				return
 			}
 			if len(stderr) != 0 {
