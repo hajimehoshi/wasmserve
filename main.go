@@ -110,6 +110,7 @@ func handle(w http.ResponseWriter, r *http.Request) {
 			stderr, err := cmd.CombinedOutput()
 			if err != nil {
 				msg := fmt.Sprintf("%s\n%s", err.Error(), string(stderr))
+				log.Print(string(stderr))
 				http.Error(w, msg, http.StatusInternalServerError)
 				return
 			}

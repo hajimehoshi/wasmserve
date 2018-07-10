@@ -20,6 +20,17 @@ git clone https://go.googlesource.com/go go-code
 cd go-code/src
 ./make.sh
 
+# Run WasmServe with the latest Go.
+~/go-code/bin/go run github.com/hajimehoshi/wasmserve -tags=example
+```
+
+And open `http://localhost:8080/github.com/hajimehoshi/wasmserve/example/` on your browser.
+
+## Example 2
+
+```
+# Install the latest Go like above.
+
 # Install some libraries.
 go get github.com/hajimehoshi/wasmserve
 go get github.com/hajimehoshi/ebiten
