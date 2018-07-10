@@ -33,18 +33,18 @@ const indexHTML = `<!DOCTYPE html>
 <script src="wasm_exec.js"></script>
 <script>
 (async () => {
-  const go = new Go();
-  const resp = await fetch("main.wasm");
-  if (resp.ok) {
-    const src = await resp.arrayBuffer();
-    WebAssembly.instantiate(src, go.importObject).then(result => {
-      go.run(result.instance);
-    });
-  } else {
+  const resp = await fetch('main.wasm');
+  if (!resp.ok) {
     const pre = document.createElement('pre');
     pre.innerText = await resp.text();
     document.body.appendChild(pre);
+    return;
   }
+  const src = await resp.arrayBuffer();
+  const go = new Go();
+  WebAssembly.instantiate(src, go.importObject).then(result => {
+    go.run(result.instance);
+  });
 })();
 </script>
 `
