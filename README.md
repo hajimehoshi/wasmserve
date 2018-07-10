@@ -21,6 +21,7 @@ cd go-code/src
 ./make.sh
 
 # Run WasmServe with the latest Go.
+# Be careful that `-tags=example` is required to run the below example application.
 ~/go-code/bin/go run github.com/hajimehoshi/wasmserve -tags=example
 ```
 
