@@ -137,7 +137,6 @@ func handle(w http.ResponseWriter, r *http.Request) {
 
 func main() {
 	flag.Parse()
-	//mime.AddExtensionType(".wasm", "application/wasm")
 	http.HandleFunc("/", handle)
 	log.Fatal(http.ListenAndServe(*flagHTTP, nil))
 }
