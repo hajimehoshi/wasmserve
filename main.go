@@ -42,9 +42,8 @@ const indexHTML = `<!DOCTYPE html>
   }
   const src = await resp.arrayBuffer();
   const go = new Go();
-  WebAssembly.instantiate(src, go.importObject).then(result => {
-    go.run(result.instance);
-  });
+  const result = await WebAssembly.instantiate(src, go.importObject);
+  go.run(result.instance);
 })();
 </script>
 `
