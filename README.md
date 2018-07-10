@@ -28,7 +28,7 @@ And open `http://localhost:8080/github.com/hajimehoshi/wasmserve/example/` on yo
 
 ## Example 2
 
-```
+```sh
 # Install the latest Go like above.
 
 # Install some libraries.
