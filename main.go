@@ -17,7 +17,6 @@ package main
 import (
 	"bytes"
 	"flag"
-	"fmt"
 	"io/ioutil"
 	"log"
 	"net/http"
@@ -27,6 +26,8 @@ import (
 	"runtime"
 	"strings"
 	"time"
+
+	"golang.org/x/tools/go/packages"
 )
 
 const indexHTML = `<!DOCTYPE html>
@@ -53,15 +54,71 @@ var (
 	flagTags = flag.String("tags", "", "Build tags")
 )
 
-func handle(w http.ResponseWriter, r *http.Request) {
-	src := filepath.Join(runtime.GOROOT(), "src")
-	if gopath := os.Getenv("GOPATH"); gopath != "" {
-		src = filepath.Join(gopath, "src")
+func gobin() string {
+	return filepath.Join(runtime.GOROOT(), "bin", "go")
+}
+
+func ensureModule(path string) ([]byte, error) {
+	_, err := os.Stat(filepath.Join(path, "go.mod"))
+	if err == nil {
+		return nil, nil
 	}
-	path := filepath.Join(src, r.URL.Path[1:])
+	if !os.IsNotExist(err) {
+		return nil, err
+	}
+	log.Print("(", path, ")")
+	log.Print("go mod init example.com/m")
+	cmd := exec.Command(gobin(), "mod", "init", "example.com/m")
+	cmd.Dir = path
+	return cmd.CombinedOutput()
+}
+
+var tmpDir = ""
+
+func ensureTmp() (string, error) {
+	if tmpDir != "" {
+		return tmpDir, nil
+	}
+
+	tmp, err := ioutil.TempDir("", "")
+	if err != nil {
+		return "", err
+	}
+	tmpDir = tmp
+	return tmpDir, nil
+}
+
+func handle(w http.ResponseWriter, r *http.Request) {
+	tmp, err := ensureTmp()
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	if stderr, err := ensureModule(tmp); err != nil {
+		log.Print(err)
+		log.Print(string(stderr))
+		http.Error(w, string(stderr), http.StatusInternalServerError)
+		return
+	}
+
+	upath := r.URL.Path[1:]
+	cfg := &packages.Config{
+		Dir: tmp,
+		Env: append(os.Environ(), "GO111MODULE=on", "GOOS=js", "GOARCH=wasm"),
+	}
+	if tags := *flagTags; tags != "" {
+		cfg.BuildFlags = []string{"-tags", tags}
+	}
+	pkg := filepath.Dir(upath)
+	pkgs, err := packages.Load(cfg, pkg)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+	fpath := filepath.Join(filepath.Dir(pkgs[0].GoFiles[0]), filepath.Base(upath))
 
 	if !strings.HasSuffix(r.URL.Path, "/") {
-		fi, err := os.Stat(path)
+		fi, err := os.Stat(fpath)
 		if err != nil && !os.IsNotExist(err) {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
@@ -73,54 +130,45 @@ func handle(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if strings.HasSuffix(r.URL.Path, "/") {
-		path = filepath.Join(path, "index.html")
+		fpath = filepath.Join(fpath, "index.html")
 	}
 
-	switch filepath.Base(path) {
+	switch filepath.Base(fpath) {
 	case "index.html":
-		if _, err := os.Stat(path); os.IsNotExist(err) {
+		if _, err := os.Stat(fpath); os.IsNotExist(err) {
 			http.ServeContent(w, r, "index.html", time.Now(), bytes.NewReader([]byte(indexHTML)))
 			return
 		}
 	case "wasm_exec.js":
-		if _, err := os.Stat(path); os.IsNotExist(err) {
+		if _, err := os.Stat(fpath); os.IsNotExist(err) {
 			f := filepath.Join(runtime.GOROOT(), "misc", "wasm", "wasm_exec.js")
 			http.ServeFile(w, r, f)
 			return
 		}
 	case "main.wasm":
-		if _, err := os.Stat(path); os.IsNotExist(err) {
-			tmp, err := ioutil.TempDir("", "")
-			if err != nil {
-				http.Error(w, err.Error(), http.StatusInternalServerError)
-				return
-			}
-			out := filepath.Join(tmp, "main.wasm")
-
-			args := []string{"build", "-o", out}
+		if _, err := os.Stat(fpath); os.IsNotExist(err) {
+			// go build
+			args := []string{"build", "-o", "main.wasm"}
 			if *flagTags != "" {
 				args = append(args, "-tags", *flagTags)
 			}
-			args = append(args, filepath.Dir(r.URL.Path[1:]))
-
-			cmd := exec.Command(filepath.Join(runtime.GOROOT(), "bin", "go"), args...)
-			cmd.Env = []string{"GOOS=js", "GOARCH=wasm"}
-			if gopath := os.Getenv("GOPATH"); gopath != "" {
-				cmd.Env = append(cmd.Env, fmt.Sprintf("GOPATH=%s", gopath))
-			}
-			stderr, err := cmd.CombinedOutput()
+			args = append(args, pkg)
+			log.Print("go ", strings.Join(args, " "))
+			cmdBuild := exec.Command(gobin(), args...)
+			cmdBuild.Env = append(os.Environ(), "GO111MODULE=on", "GOOS=js", "GOARCH=wasm")
+			cmdBuild.Dir = tmp
+			out, err := cmdBuild.CombinedOutput()
 			if err != nil {
 				log.Print(err)
-				log.Print(string(stderr))
-				http.Error(w, string(stderr), http.StatusInternalServerError)
+				log.Print(string(out))
+				http.Error(w, string(out), http.StatusInternalServerError)
 				return
 			}
-			if len(stderr) != 0 {
-				http.Error(w, string(stderr), http.StatusInternalServerError)
-				return
+			if len(out) > 0 {
+				log.Print(string(out))
 			}
 
-			f, err := os.Open(out)
+			f, err := os.Open(filepath.Join(tmp, "main.wasm"))
 			if err != nil {
 				http.Error(w, err.Error(), http.StatusInternalServerError)
 				return
@@ -131,7 +179,7 @@ func handle(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	http.ServeFile(w, r, path)
+	http.ServeFile(w, r, fpath)
 }
 
 func main() {
