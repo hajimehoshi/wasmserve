@@ -73,49 +73,78 @@ func ensureModule(path string) ([]byte, error) {
 	return cmd.CombinedOutput()
 }
 
-var tmpDir = ""
+var (
+	tmpWorkDir   = ""
+	tmpOutputDir = ""
+)
 
-func ensureTmp() (string, error) {
-	if tmpDir != "" {
-		return tmpDir, nil
+func ensureTmpWorkDir() (string, error) {
+	if tmpWorkDir != "" {
+		return tmpWorkDir, nil
 	}
 
 	tmp, err := ioutil.TempDir("", "")
 	if err != nil {
 		return "", err
 	}
-	tmpDir = tmp
-	return tmpDir, nil
+	tmpWorkDir = tmp
+	return tmpWorkDir, nil
+}
+
+func ensureTmpOutputDir() (string, error) {
+	if tmpOutputDir != "" {
+		return tmpOutputDir, nil
+	}
+
+	tmp, err := ioutil.TempDir("", "")
+	if err != nil {
+		return "", err
+	}
+	tmpOutputDir = tmp
+	return tmpOutputDir, nil
 }
 
 func handle(w http.ResponseWriter, r *http.Request) {
-	tmp, err := ensureTmp()
+	output, err := ensureTmpOutputDir()
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
-	}
-	if stderr, err := ensureModule(tmp); err != nil {
-		log.Print(err)
-		log.Print(string(stderr))
-		http.Error(w, string(stderr), http.StatusInternalServerError)
 		return
 	}
 
 	upath := r.URL.Path[1:]
-	cfg := &packages.Config{
-		Dir: tmp,
-		Env: append(os.Environ(), "GO111MODULE=on", "GOOS=js", "GOARCH=wasm"),
-	}
-	if tags := *flagTags; tags != "" {
-		cfg.BuildFlags = []string{"-tags", tags}
-	}
 	pkg := filepath.Dir(upath)
-	pkgs, err := packages.Load(cfg, pkg)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
-		return
+	fpath := filepath.Join(".", filepath.Base(upath))
+	workdir := "."
+	if pkg != "." {
+		tmp, err := ensureTmpWorkDir()
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+
+		cfg := &packages.Config{
+			Dir: tmp,
+			Env: append(os.Environ(), "GO111MODULE=on", "GOOS=js", "GOARCH=wasm"),
+		}
+		if tags := *flagTags; tags != "" {
+			cfg.BuildFlags = []string{"-tags", tags}
+		}
+
+		if stderr, err := ensureModule(tmp); err != nil {
+			log.Print(err)
+			log.Print(string(stderr))
+			http.Error(w, string(stderr), http.StatusInternalServerError)
+			return
+		}
+
+		pkgs, err := packages.Load(cfg, pkg)
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		fpath = filepath.Join(filepath.Dir(pkgs[0].GoFiles[0]), filepath.Base(upath))
+		workdir = tmp
 	}
-	fpath := filepath.Join(filepath.Dir(pkgs[0].GoFiles[0]), filepath.Base(upath))
 
 	if !strings.HasSuffix(r.URL.Path, "/") {
 		fi, err := os.Stat(fpath)
@@ -148,7 +177,7 @@ func handle(w http.ResponseWriter, r *http.Request) {
 	case "main.wasm":
 		if _, err := os.Stat(fpath); os.IsNotExist(err) {
 			// go build
-			args := []string{"build", "-o", "main.wasm"}
+			args := []string{"build", "-o", filepath.Join(output, "main.wasm")}
 			if *flagTags != "" {
 				args = append(args, "-tags", *flagTags)
 			}
@@ -156,7 +185,7 @@ func handle(w http.ResponseWriter, r *http.Request) {
 			log.Print("go ", strings.Join(args, " "))
 			cmdBuild := exec.Command(gobin(), args...)
 			cmdBuild.Env = append(os.Environ(), "GO111MODULE=on", "GOOS=js", "GOARCH=wasm")
-			cmdBuild.Dir = tmp
+			cmdBuild.Dir = workdir
 			out, err := cmdBuild.CombinedOutput()
 			if err != nil {
 				log.Print(err)
@@ -168,7 +197,7 @@ func handle(w http.ResponseWriter, r *http.Request) {
 				log.Print(string(out))
 			}
 
-			f, err := os.Open(filepath.Join(tmp, "main.wasm"))
+			f, err := os.Open(filepath.Join(output, "main.wasm"))
 			if err != nil {
 				http.Error(w, err.Error(), http.StatusInternalServerError)
 				return

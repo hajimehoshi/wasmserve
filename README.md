@@ -15,7 +15,6 @@ Usage of wasmserve
 ## Example
 
 ```sh
-# Run WasmServe with Go 1.11 or later.
 # Be careful that `-tags=example` is required to run the below example application.
 wasmserve -tags=example
 ```
@@ -24,11 +23,12 @@ And open `http://localhost:8080/github.com/hajimehoshi/wasmserve/example/` on yo
 
 ## Example 2
 
+WasmServe can run a local project.
+
 ```sh
-# Run WasmServe with Go 1.11 or later.
+git clone https://github.com/hajimehoshi/ebiten # This might take several minutes.
+cd ebiten/examples/sprites
 wasmserve -tags=example
 ```
 
-And open `http://localhost:8080/github.com/hajimehoshi/ebiten/examples/sprites/` on your browser.
-
-Known issue: `wasmserve` tries to get Ebiten ver 1.7.x, which doesn't work with Wasm. I'll fix this to enable to specify the version explicitly at URL.
+And open `http://localhost:8080/` on your browser.
