@@ -31,8 +31,7 @@ import (
 )
 
 const indexHTML = `<!DOCTYPE html>
-<script src="wasm_exec.js"></script>
-<script>
+<script src="wasm_exec.js"></script><script>
 (async () => {
   const resp = await fetch('main.wasm');
   if (!resp.ok) {
