@@ -17,6 +17,7 @@ package main
 import (
 	"bytes"
 	"flag"
+	"fmt"
 	"io/ioutil"
 	"log"
 	"net/http"
@@ -139,6 +140,10 @@ func handle(w http.ResponseWriter, r *http.Request) {
 		pkgs, err := packages.Load(cfg, pkg)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		if len(pkgs[0].GoFiles) == 0 {
+			http.Error(w, fmt.Sprintf("No Go files found for %s", pkgs[0]), http.StatusInternalServerError)
 			return
 		}
 		fpath = filepath.Join(filepath.Dir(pkgs[0].GoFiles[0]), filepath.Base(upath))
