@@ -143,7 +143,11 @@ func handle(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 		if len(pkgs[0].GoFiles) == 0 {
-			http.Error(w, fmt.Sprintf("No Go files found for %s", pkgs[0]), http.StatusInternalServerError)
+			if r.URL.Path[len(r.URL.Path)-1] == '/' {
+				http.Error(w, fmt.Sprintf("No Go files found for %s", pkg), http.StatusBadRequest)
+				return
+			}
+			http.Redirect(w, r, r.URL.Path+"/", http.StatusSeeOther)
 			return
 		}
 		fpath = filepath.Join(filepath.Dir(pkgs[0].GoFiles[0]), filepath.Base(upath))
