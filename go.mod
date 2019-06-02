@@ -1,3 +1,3 @@
 module github.com/hajimehoshi/wasmserve
 
-require golang.org/x/tools v0.0.0-20180826000951-f6ba57429505
+require golang.org/x/tools v0.0.0-20190601110225-0abef6e9ecb8
