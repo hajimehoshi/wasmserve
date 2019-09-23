@@ -20,21 +20,23 @@ Usage of wasmserve
 
 ## Example
 
+Running a remote package
+
 ```sh
 # Be careful that `-tags=example` is required to run the below example application.
-wasmserve -tags=example
+wasmserve -tags=example github.com/hajimehoshi/wasmserve/example
 ```
 
-And open `http://localhost:8080/github.com/hajimehoshi/wasmserve/example/` on your browser.
+And open `http://localhost:8080/` on your browser.
 
 ## Example 2
 
-WasmServe can run a local project.
+Running a local package
 
 ```sh
 git clone https://github.com/hajimehoshi/ebiten # This might take several minutes.
-cd ebiten/examples/sprites
-wasmserve -tags=example
+cd ebiten
+wasmserve -tags=example ./examples/sprites
 ```
 
 And open `http://localhost:8080/` on your browser.

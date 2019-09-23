@@ -17,7 +17,6 @@ package main
 import (
 	"bytes"
 	"flag"
-	"fmt"
 	"io/ioutil"
 	"log"
 	"net/http"
@@ -27,8 +26,6 @@ import (
 	"runtime"
 	"strings"
 	"time"
-
-	"golang.org/x/tools/go/packages"
 )
 
 const indexHTML = `<!DOCTYPE html>
@@ -112,47 +109,8 @@ func handle(w http.ResponseWriter, r *http.Request) {
 	}
 
 	upath := r.URL.Path[1:]
-	pkg := filepath.Dir(upath)
 	fpath := filepath.Join(".", filepath.Base(upath))
 	workdir := "."
-	if pkg != "." {
-		tmp, err := ensureTmpWorkDir()
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
-		}
-
-		cfg := &packages.Config{
-			Dir: tmp,
-			Env: append(os.Environ(), "GO111MODULE=on", "GOOS=js", "GOARCH=wasm"),
-		}
-		if tags := *flagTags; tags != "" {
-			cfg.BuildFlags = []string{"-tags", tags}
-		}
-
-		if stderr, err := ensureModule(tmp); err != nil {
-			log.Print(err)
-			log.Print(string(stderr))
-			http.Error(w, string(stderr), http.StatusInternalServerError)
-			return
-		}
-
-		pkgs, err := packages.Load(cfg, pkg)
-		if err != nil {
-			http.Error(w, err.Error(), http.StatusInternalServerError)
-			return
-		}
-		if len(pkgs[0].GoFiles) == 0 {
-			if r.URL.Path[len(r.URL.Path)-1] == '/' {
-				http.Error(w, fmt.Sprintf("No Go files found for %s", pkg), http.StatusBadRequest)
-				return
-			}
-			http.Redirect(w, r, r.URL.Path+"/", http.StatusSeeOther)
-			return
-		}
-		fpath = filepath.Join(filepath.Dir(pkgs[0].GoFiles[0]), filepath.Base(upath))
-		workdir = tmp
-	}
 
 	if !strings.HasSuffix(r.URL.Path, "/") {
 		fi, err := os.Stat(fpath)
@@ -189,7 +147,11 @@ func handle(w http.ResponseWriter, r *http.Request) {
 			if *flagTags != "" {
 				args = append(args, "-tags", *flagTags)
 			}
-			args = append(args, pkg)
+			if len(flag.Args()) > 0 {
+				args = append(args, flag.Args()[0])
+			} else {
+				args = append(args, ".")
+			}
 			log.Print("go ", strings.Join(args, " "))
 			cmdBuild := exec.Command(gobin(), args...)
 			cmdBuild.Env = append(os.Environ(), "GO111MODULE=on", "GOOS=js", "GOARCH=wasm")
