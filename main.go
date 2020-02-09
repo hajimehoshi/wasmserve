@@ -51,10 +51,6 @@ var (
 	flagTags = flag.String("tags", "", "Build tags")
 )
 
-func gobin() string {
-	return filepath.Join(runtime.GOROOT(), "bin", "go")
-}
-
 func ensureModule(path string) ([]byte, error) {
 	_, err := os.Stat(filepath.Join(path, "go.mod"))
 	if err == nil {
@@ -65,7 +61,7 @@ func ensureModule(path string) ([]byte, error) {
 	}
 	log.Print("(", path, ")")
 	log.Print("go mod init example.com/m")
-	cmd := exec.Command(gobin(), "mod", "init", "example.com/m")
+	cmd := exec.Command("go", "mod", "init", "example.com/m")
 	cmd.Dir = path
 	return cmd.CombinedOutput()
 }
@@ -153,7 +149,7 @@ func handle(w http.ResponseWriter, r *http.Request) {
 				args = append(args, ".")
 			}
 			log.Print("go ", strings.Join(args, " "))
-			cmdBuild := exec.Command(gobin(), args...)
+			cmdBuild := exec.Command("go", args...)
 			cmdBuild.Env = append(os.Environ(), "GO111MODULE=on", "GOOS=js", "GOARCH=wasm")
 			cmdBuild.Dir = workdir
 			out, err := cmdBuild.CombinedOutput()
