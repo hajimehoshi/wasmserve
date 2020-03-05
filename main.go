@@ -99,9 +99,7 @@ func ensureTmpOutputDir() (string, error) {
 }
 
 func handle(w http.ResponseWriter, r *http.Request) {
-	if *flagAllowOrigin == "*" {
-		w.Header().Set("Access-Control-Allow-Origin", r.Header.Get("Origin"))
-	} else if *flagAllowOrigin != "" {
+	if *flagAllowOrigin != "" {
 		w.Header().Set("Access-Control-Allow-Origin", *flagAllowOrigin)
 	}
 
