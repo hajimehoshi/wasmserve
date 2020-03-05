@@ -47,8 +47,9 @@ const indexHTML = `<!DOCTYPE html>
 `
 
 var (
-	flagHTTP = flag.String("http", ":8080", "HTTP bind address to serve")
-	flagTags = flag.String("tags", "", "Build tags")
+	flagHTTP        = flag.String("http", ":8080", "HTTP bind address to serve")
+	flagTags        = flag.String("tags", "", "Build tags")
+	flagAllowOrigin = flag.String("allow-origin", "", "Allow specified origin (or * for all origins) to make requests to this server")
 )
 
 func ensureModule(path string) ([]byte, error) {
@@ -98,6 +99,10 @@ func ensureTmpOutputDir() (string, error) {
 }
 
 func handle(w http.ResponseWriter, r *http.Request) {
+	if *flagAllowOrigin != "" {
+		w.Header().Set("Access-Control-Allow-Origin", *flagAllowOrigin)
+	}
+
 	output, err := ensureTmpOutputDir()
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
