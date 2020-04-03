@@ -131,52 +131,58 @@ func handle(w http.ResponseWriter, r *http.Request) {
 
 	switch filepath.Base(fpath) {
 	case "index.html":
-		if _, err := os.Stat(fpath); os.IsNotExist(err) {
-			http.ServeContent(w, r, "index.html", time.Now(), bytes.NewReader([]byte(indexHTML)))
+		if _, err := os.Stat(fpath); err != nil && !os.IsNotExist(err) {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
+		http.ServeContent(w, r, "index.html", time.Now(), bytes.NewReader([]byte(indexHTML)))
+		return
 	case "wasm_exec.js":
-		if _, err := os.Stat(fpath); os.IsNotExist(err) {
-			f := filepath.Join(runtime.GOROOT(), "misc", "wasm", "wasm_exec.js")
-			http.ServeFile(w, r, f)
+		if _, err := os.Stat(fpath); err != nil && !os.IsNotExist(err) {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
+		f := filepath.Join(runtime.GOROOT(), "misc", "wasm", "wasm_exec.js")
+		http.ServeFile(w, r, f)
+		return
 	case "main.wasm":
-		if _, err := os.Stat(fpath); os.IsNotExist(err) {
-			// go build
-			args := []string{"build", "-o", filepath.Join(output, "main.wasm")}
-			if *flagTags != "" {
-				args = append(args, "-tags", *flagTags)
-			}
-			if len(flag.Args()) > 0 {
-				args = append(args, flag.Args()[0])
-			} else {
-				args = append(args, ".")
-			}
-			log.Print("go ", strings.Join(args, " "))
-			cmdBuild := exec.Command("go", args...)
-			cmdBuild.Env = append(os.Environ(), "GO111MODULE=on", "GOOS=js", "GOARCH=wasm")
-			cmdBuild.Dir = workdir
-			out, err := cmdBuild.CombinedOutput()
-			if err != nil {
-				log.Print(err)
-				log.Print(string(out))
-				http.Error(w, string(out), http.StatusInternalServerError)
-				return
-			}
-			if len(out) > 0 {
-				log.Print(string(out))
-			}
-
-			f, err := os.Open(filepath.Join(output, "main.wasm"))
-			if err != nil {
-				http.Error(w, err.Error(), http.StatusInternalServerError)
-				return
-			}
-			defer f.Close()
-			http.ServeContent(w, r, "main.wasm", time.Now(), f)
+		if _, err := os.Stat(fpath); err != nil && !os.IsNotExist(err) {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
+		// go build
+		args := []string{"build", "-o", filepath.Join(output, "main.wasm")}
+		if *flagTags != "" {
+			args = append(args, "-tags", *flagTags)
+		}
+		if len(flag.Args()) > 0 {
+			args = append(args, flag.Args()[0])
+		} else {
+			args = append(args, ".")
+		}
+		log.Print("go ", strings.Join(args, " "))
+		cmdBuild := exec.Command("go", args...)
+		cmdBuild.Env = append(os.Environ(), "GO111MODULE=on", "GOOS=js", "GOARCH=wasm")
+		cmdBuild.Dir = workdir
+		out, err := cmdBuild.CombinedOutput()
+		if err != nil {
+			log.Print(err)
+			log.Print(string(out))
+			http.Error(w, string(out), http.StatusInternalServerError)
+			return
+		}
+		if len(out) > 0 {
+			log.Print(string(out))
+		}
+
+		f, err := os.Open(filepath.Join(output, "main.wasm"))
+		if err != nil {
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		defer f.Close()
+		http.ServeContent(w, r, "main.wasm", time.Now(), f)
+		return
 	}
 
 	http.ServeFile(w, r, fpath)
