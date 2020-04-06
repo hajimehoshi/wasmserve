@@ -12,6 +12,8 @@ go get -u github.com/hajimehoshi/wasmserve
 
 ```
 Usage of wasmserve
+  -allow-origin string
+        Allow specified origin (or * for all origins) to make requests to this server
   -http string
         HTTP bind address to serve (default ":8080")
   -tags string
