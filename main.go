@@ -98,6 +98,15 @@ func ensureTmpOutputDir() (string, error) {
 	return tmpOutputDir, nil
 }
 
+func hasGo111Module(env []string) bool {
+	for _, e := range env {
+		if strings.HasPrefix(e, "GO111MODULE=") {
+			return true
+		}
+	}
+	return false
+}
+
 func handle(w http.ResponseWriter, r *http.Request) {
 	if *flagAllowOrigin != "" {
 		w.Header().Set("Access-Control-Allow-Origin", *flagAllowOrigin)
@@ -162,7 +171,12 @@ func handle(w http.ResponseWriter, r *http.Request) {
 		}
 		log.Print("go ", strings.Join(args, " "))
 		cmdBuild := exec.Command("go", args...)
-		cmdBuild.Env = append(os.Environ(), "GO111MODULE=on", "GOOS=js", "GOARCH=wasm")
+		cmdBuild.Env = append(os.Environ(), "GOOS=js", "GOARCH=wasm")
+		// If GO111MODULE is not specified explicilty, enable Go modules.
+		// Enabling this is for backward compatibility of wasmserve.
+		if !hasGo111Module(cmdBuild.Env) {
+			cmdBuild.Env = append(cmdBuild.Env, "GO111MODULE=on")
+		}
 		cmdBuild.Dir = workdir
 		out, err := cmdBuild.CombinedOutput()
 		if err != nil {
