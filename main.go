@@ -134,12 +134,8 @@ func handle(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	if strings.HasSuffix(r.URL.Path, "/") {
-		fpath = filepath.Join(fpath, "index.html")
-	}
-
 	switch filepath.Base(fpath) {
-	case "index.html":
+	case "index.html", ".":
 		if _, err := os.Stat(fpath); err != nil && !os.IsNotExist(err) {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
@@ -199,7 +195,7 @@ func handle(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	http.ServeFile(w, r, fpath)
+	http.ServeFile(w, r, filepath.Join(".", r.URL.Path))
 }
 
 func main() {
