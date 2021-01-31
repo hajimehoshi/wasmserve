@@ -46,3 +46,11 @@ And open `http://localhost:8080/` on your browser.
 ## Known issue with Windows Subsystem for Linux (WSL)
 
 This application sometimes does not work under WSL, due to bugs in WSL, see https://github.com/hajimehoshi/wasmserve/issues/5 for details.
+
+## Tips
+
+If you want to change the working directory to serve, you can use cd with parentheses:
+
+```
+(cd /path/to/working/dir; wasmserve github.com/yourname/yourpackage)
+```
