@@ -142,7 +142,7 @@ func handle(w http.ResponseWriter, r *http.Request) {
 		log.Print("go ", strings.Join(args, " "))
 		cmdBuild := exec.Command("go", args...)
 		cmdBuild.Env = append(os.Environ(), "GOOS=js", "GOARCH=wasm")
-		// If GO111MODULE is not specified explicilty, enable Go modules.
+		// If GO111MODULE is not specified explicitly, enable Go modules.
 		// Enabling this is for backward compatibility of wasmserve.
 		if !hasGo111Module(cmdBuild.Env) {
 			cmdBuild.Env = append(cmdBuild.Env, "GO111MODULE=on")
