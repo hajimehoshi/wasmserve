@@ -55,38 +55,9 @@ var (
 	flagAllowOrigin = flag.String("allow-origin", "", "Allow specified origin (or * for all origins) to make requests to this server")
 )
 
-func ensureModule(path string) ([]byte, error) {
-	_, err := os.Stat(filepath.Join(path, "go.mod"))
-	if err == nil {
-		return nil, nil
-	}
-	if !os.IsNotExist(err) {
-		return nil, err
-	}
-	log.Print("(", path, ")")
-	log.Print("go mod init example.com/m")
-	cmd := exec.Command("go", "mod", "init", "example.com/m")
-	cmd.Dir = path
-	return cmd.CombinedOutput()
-}
-
 var (
-	tmpWorkDir   = ""
 	tmpOutputDir = ""
 )
-
-func ensureTmpWorkDir() (string, error) {
-	if tmpWorkDir != "" {
-		return tmpWorkDir, nil
-	}
-
-	tmp, err := ioutil.TempDir("", "")
-	if err != nil {
-		return "", err
-	}
-	tmpWorkDir = tmp
-	return tmpWorkDir, nil
-}
 
 func ensureTmpOutputDir() (string, error) {
 	if tmpOutputDir != "" {
