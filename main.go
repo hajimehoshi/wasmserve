@@ -53,6 +53,7 @@ var (
 	flagHTTP        = flag.String("http", ":8080", "HTTP bind address to serve")
 	flagTags        = flag.String("tags", "", "Build tags")
 	flagAllowOrigin = flag.String("allow-origin", "", "Allow specified origin (or * for all origins) to make requests to this server")
+	flagWorkdirPath = flag.String("workdir", ".", "specify the build workdir path")
 )
 
 func ensureModule(path string) ([]byte, error) {
@@ -123,7 +124,7 @@ func handle(w http.ResponseWriter, r *http.Request) {
 
 	upath := r.URL.Path[1:]
 	fpath := filepath.Join(".", filepath.Base(upath))
-	workdir := "."
+	workdir := flagWorkdirPath
 
 	if !strings.HasSuffix(r.URL.Path, "/") {
 		fi, err := os.Stat(fpath)
@@ -176,7 +177,7 @@ func handle(w http.ResponseWriter, r *http.Request) {
 		if !hasGo111Module(cmdBuild.Env) {
 			cmdBuild.Env = append(cmdBuild.Env, "GO111MODULE=on")
 		}
-		cmdBuild.Dir = workdir
+		cmdBuild.Dir = *workdir
 		out, err := cmdBuild.CombinedOutput()
 		if err != nil {
 			log.Print(err)
@@ -198,11 +199,12 @@ func handle(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	http.ServeFile(w, r, filepath.Join(".", r.URL.Path))
+	http.ServeFile(w, r, filepath.Join(*workdir, r.URL.Path))
 }
 
 func main() {
 	flag.Parse()
+	log.Printf("current workdir path: %s", *flagWorkdirPath)
 	http.HandleFunc("/", handle)
 	log.Fatal(http.ListenAndServe(*flagHTTP, nil))
 }
