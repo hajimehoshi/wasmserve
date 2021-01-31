@@ -18,6 +18,7 @@ Usage of wasmserve
         HTTP bind address to serve (default ":8080")
   -tags string
         Build tags
+  -workdir specify the build workdir path
 ```
 
 ## Example
