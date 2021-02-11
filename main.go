@@ -25,6 +25,7 @@ import (
 	"path/filepath"
 	"runtime"
 	"strings"
+	"text/template"
 	"time"
 )
 
@@ -44,6 +45,7 @@ const indexHTML = `<!DOCTYPE html>
   const src = await resp.arrayBuffer();
   const go = new Go();
   const result = await WebAssembly.instantiate(src, go.importObject);
+  go.argv = {{.Argv}};
   go.run(result.instance);
 })();
 </script>
@@ -114,7 +116,13 @@ func handle(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
-		http.ServeContent(w, r, "index.html", time.Now(), bytes.NewReader([]byte(indexHTML)))
+		fargs := flag.Args()
+		argv := make([]string, 0, len(fargs))
+		for _, a := range fargs {
+			argv = append(argv, `"`+template.JSEscapeString(a)+`"`)
+		}
+		h := strings.ReplaceAll(indexHTML, "{{.Argv}}", "["+strings.Join(argv, ", ")+"]")
+		http.ServeContent(w, r, "index.html", time.Now(), bytes.NewReader([]byte(h)))
 		return
 	case "wasm_exec.js":
 		if _, err := os.Stat(fpath); err != nil && !os.IsNotExist(err) {

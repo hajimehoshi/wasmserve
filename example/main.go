@@ -17,10 +17,15 @@
 package main
 
 import (
+	"flag"
+	"fmt"
 	"syscall/js"
 )
 
 func main() {
+	flag.Parse()
+	fmt.Println(flag.Args())
+
 	p := js.Global().Get("document").Call("createElement", "p")
 	p.Set("innerText", "Hello, World!")
 	js.Global().Get("document").Get("body").Call("appendChild", p)
