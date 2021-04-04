@@ -47,7 +47,8 @@ const indexHTML = `<!DOCTYPE html>
     go.argv = {{.Argv}};
     go.run(result.instance);
   }
-  const reload = await fetch('__wait');
+  const reload = await fetch('_wait');
+  // The server sends a response for '_wait' when a request is sent to '_notify'.
   if (reload.ok) {
     location.reload();
   }
@@ -181,10 +182,10 @@ func handle(w http.ResponseWriter, r *http.Request) {
 		http.ServeContent(w, r, "main.wasm", time.Now(), f)
 		return
 
-	case "__wait":
+	case "_wait":
 		waitForUpdate(w, r)
 		return
-	case "__notify":
+	case "_notify":
 		notifyWaiters(w, r)
 		return
 	}
@@ -193,9 +194,6 @@ func handle(w http.ResponseWriter, r *http.Request) {
 }
 
 func waitForUpdate(w http.ResponseWriter, r *http.Request) {
-	// Channels are many-writers-single-reader device.
-	// so wait-ers are the writers for us...
-
 	waitChannel <- struct{}{}
 	http.ServeContent(w, r, "", time.Now(), bytes.NewReader(nil))
 }
@@ -204,7 +202,7 @@ func notifyWaiters(w http.ResponseWriter, r *http.Request) {
 	for {
 		select {
 		case <-waitChannel:
-			// dump message
+
 		default:
 			http.ServeContent(w, r, "", time.Now(), bytes.NewReader(nil))
 			return
