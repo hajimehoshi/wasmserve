@@ -202,7 +202,6 @@ func notifyWaiters(w http.ResponseWriter, r *http.Request) {
 	for {
 		select {
 		case <-waitChannel:
-
 		default:
 			http.ServeContent(w, r, "", time.Now(), bytes.NewReader(nil))
 			return

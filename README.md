@@ -22,10 +22,10 @@ Usage of wasmserve
 
 # Trigger Refresh
 
-Once the browser loads the page, you can trigger a reload by making a call to teh server at `/__notify`, like this:
+Once the browser loads the page, you can trigger a reload by making a call to teh server at `/_notify`, like this:
 
 ```sh
-curl localhost:8080/__notify
+curl localhost:8080/_notify
 ```
 
 This will make the browser reload. You can add this command to a build script or to an IDE command, to have the browser automatically update without leaving your IDE.
@@ -67,7 +67,7 @@ This application sometimes does not work under WSL, due to bugs in WSL, see http
 
 * To trigger a browser reload from a script, make a call to `/_notify`, like this:
 
-```
+```sh
 curl http://localhost:8080/_notify
 ```
 This will make the browser refresh the page.
