@@ -20,6 +20,16 @@ Usage of wasmserve
         Build tags
 ```
 
+# Trigger Refresh
+
+Once the browser loads the page, you can trigger a reload by making a call to teh server at `/_notify`, like this:
+
+```sh
+curl localhost:8080/_notify
+```
+
+This will make the browser reload. You can add this command to a build script or to an IDE command, to have the browser automatically update without leaving your IDE.
+
 ## Example
 
 Running a remote package
@@ -49,8 +59,15 @@ This application sometimes does not work under WSL, due to bugs in WSL, see http
 
 ## Tips
 
-If you want to change the working directory to serve, you can use cd with parentheses:
+* If you want to change the working directory to serve, you can use cd with parentheses:
 
 ```
 (cd /path/to/working/dir; wasmserve github.com/yourname/yourpackage)
 ```
+
+* To trigger a browser reload from a script, make a call to `/_notify`, like this:
+
+```sh
+curl http://localhost:8080/_notify
+```
+This will make the browser refresh the page.

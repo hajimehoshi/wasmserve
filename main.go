@@ -40,13 +40,18 @@ const indexHTML = `<!DOCTYPE html>
     const pre = document.createElement('pre');
     pre.innerText = await resp.text();
     document.body.appendChild(pre);
-    return;
+  } else {
+    const src = await resp.arrayBuffer();
+    const go = new Go();
+    const result = await WebAssembly.instantiate(src, go.importObject);
+    go.argv = {{.Argv}};
+    go.run(result.instance);
   }
-  const src = await resp.arrayBuffer();
-  const go = new Go();
-  const result = await WebAssembly.instantiate(src, go.importObject);
-  go.argv = {{.Argv}};
-  go.run(result.instance);
+  const reload = await fetch('_wait');
+  // The server sends a response for '_wait' when a request is sent to '_notify'.
+  if (reload.ok) {
+    location.reload();
+  }
 })();
 </script>
 `
@@ -59,6 +64,7 @@ var (
 
 var (
 	tmpOutputDir = ""
+	waitChannel  = make(chan struct{})
 )
 
 func ensureTmpOutputDir() (string, error) {
@@ -175,9 +181,32 @@ func handle(w http.ResponseWriter, r *http.Request) {
 		defer f.Close()
 		http.ServeContent(w, r, "main.wasm", time.Now(), f)
 		return
+
+	case "_wait":
+		waitForUpdate(w, r)
+		return
+	case "_notify":
+		notifyWaiters(w, r)
+		return
 	}
 
 	http.ServeFile(w, r, filepath.Join(".", r.URL.Path))
+}
+
+func waitForUpdate(w http.ResponseWriter, r *http.Request) {
+	waitChannel <- struct{}{}
+	http.ServeContent(w, r, "", time.Now(), bytes.NewReader(nil))
+}
+
+func notifyWaiters(w http.ResponseWriter, r *http.Request) {
+	for {
+		select {
+		case <-waitChannel:
+		default:
+			http.ServeContent(w, r, "", time.Now(), bytes.NewReader(nil))
+			return
+		}
+	}
 }
 
 func main() {
