@@ -20,7 +20,7 @@ Usage of wasmserve
         Build tags
 ```
 
-# Trigger Refresh
+## Trigger Refresh
 
 Once the browser loads the page, you can trigger a reload by making a call to teh server at `/_notify`, like this:
 
