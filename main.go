@@ -134,7 +134,7 @@ func handle(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
-		out, err := exec.Command("go", "env", "goroot").Output()
+		out, err := exec.Command("go", "env", "GOROOT").Output()
 		if err != nil {
 			log.Print(err)
 			http.Error(w, err.Error(), http.StatusInternalServerError)
