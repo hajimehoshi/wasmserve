@@ -23,7 +23,6 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
-	"runtime"
 	"strings"
 	"text/template"
 	"time"
@@ -135,7 +134,13 @@ func handle(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		}
-		f := filepath.Join(runtime.GOROOT(), "misc", "wasm", "wasm_exec.js")
+		out, err := exec.Command("go", "env", "goroot").Output()
+		if err != nil {
+			log.Print(err)
+			http.Error(w, err.Error(), http.StatusInternalServerError)
+			return
+		}
+		f := filepath.Join(strings.TrimSpace(string(out)), "misc", "wasm", "wasm_exec.js")
 		http.ServeFile(w, r, f)
 		return
 	case "main.wasm":
