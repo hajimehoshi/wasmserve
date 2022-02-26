@@ -5,7 +5,7 @@ An HTTP server for Wasm testing like `gopherjs serve`
 ## Installation
 
 ```sh
-go get -u github.com/hajimehoshi/wasmserve
+go install github.com/hajimehoshi/wasmserve@latest
 ```
 
 ## Usage
