@@ -117,16 +117,26 @@ func handle(w http.ResponseWriter, r *http.Request) {
 
 	switch filepath.Base(fpath) {
 	case "index.html", ".":
+		htmlTemplate := indexHTML
 		if _, err := os.Stat(fpath); err != nil && !os.IsNotExist(err) {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
+		} else if fp, err := os.Open("index.html"); err == nil {
+			// User supplied their own index.html template use that as htmlTemplate.
+			b, err := ioutil.ReadAll(fp)
+			if err != nil {
+				http.Error(w, err.Error(), http.StatusInternalServerError)
+				return
+			}
+			htmlTemplate = string(b)
 		}
+
 		fargs := flag.Args()
 		argv := make([]string, 0, len(fargs))
 		for _, a := range fargs {
 			argv = append(argv, `"`+template.JSEscapeString(a)+`"`)
 		}
-		h := strings.ReplaceAll(indexHTML, "{{.Argv}}", "["+strings.Join(argv, ", ")+"]")
+		h := strings.ReplaceAll(htmlTemplate, "{{.Argv}}", "["+strings.Join(argv, ", ")+"]")
 		http.ServeContent(w, r, "index.html", time.Now(), bytes.NewReader([]byte(h)))
 		return
 	case "wasm_exec.js":
