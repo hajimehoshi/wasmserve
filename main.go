@@ -59,6 +59,7 @@ var (
 	flagHTTP        = flag.String("http", ":8080", "HTTP bind address to serve")
 	flagTags        = flag.String("tags", "", "Build tags")
 	flagAllowOrigin = flag.String("allow-origin", "", "Allow specified origin (or * for all origins) to make requests to this server")
+	flagOverlay     = flag.String("overlay", "", "Overwrite source files with a JSON file")
 )
 
 var (
@@ -152,6 +153,9 @@ func handle(w http.ResponseWriter, r *http.Request) {
 		args := []string{"build", "-o", filepath.Join(output, "main.wasm")}
 		if *flagTags != "" {
 			args = append(args, "-tags", *flagTags)
+		}
+		if *flagOverlay != "" {
+			args = append(args, "-overlay", *flagOverlay)
 		}
 		if len(flag.Args()) > 0 {
 			args = append(args, flag.Args()[0])
