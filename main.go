@@ -62,7 +62,7 @@ var (
 	flagHTTP        = flag.String("http", ":8080", "HTTP bind address to serve")
 	flagTags        = flag.String("tags", "", "Build tags")
 	flagAllowOrigin = flag.String("allow-origin", "", "Allow specified origin (or * for all origins) to make requests to this server")
-	flagOverlay     = flag.String("overlay", "", "Overwrite source files with a JSON file")
+	flagOverlay     = flag.String("overlay", "", "Overwrite source files with a JSON file (see https://pkg.go.dev/cmd/go for more details)")
 )
 
 var (

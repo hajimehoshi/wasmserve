@@ -16,6 +16,8 @@ Usage of wasmserve
         Allow specified origin (or * for all origins) to make requests to this server
   -http string
         HTTP bind address to serve (default ":8080")
+  -overlay string
+        Overwrite source files with a JSON file (see https://pkg.go.dev/cmd/go for more details)
   -tags string
         Build tags
 ```
