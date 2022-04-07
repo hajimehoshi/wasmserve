@@ -104,7 +104,7 @@ func handle(w http.ResponseWriter, r *http.Request) {
 	}
 
 	upath := r.URL.Path[1:]
-	fpath := filepath.FromSlash(path.Base(upath))
+	fpath := path.Base(upath)
 	workdir := "."
 
 	if !strings.HasSuffix(r.URL.Path, "/") {
