@@ -32,8 +32,6 @@ import (
 )
 
 const indexHTML = `<!DOCTYPE html>
-<!-- Polyfill for the old Edge browser -->
-<script src="https://cdn.jsdelivr.net/npm/text-encoding@0.7.0/lib/encoding.min.js"></script>
 <script src="wasm_exec.js"></script>
 <script>
 (async () => {
