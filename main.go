@@ -94,7 +94,6 @@ func handle(w http.ResponseWriter, r *http.Request) {
 
 	upath := r.URL.Path[1:]
 	fpath := path.Base(upath)
-	workdir := "."
 
 	if !strings.HasSuffix(r.URL.Path, "/") {
 		fi, err := os.Stat(fpath)
@@ -146,6 +145,54 @@ func handle(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		} else if errors.Is(err, fs.ErrNotExist) {
+			srcDir, err := os.Getwd()
+			if err != nil {
+				http.Error(w, err.Error(), http.StatusInternalServerError)
+				return
+			}
+
+			// determine package name to use for go get and go build
+			getPkg := ""
+			buildPkg := "."
+			buildDir := srcDir
+			if len(flag.Args()) > 0 {
+				pkg := flag.Args()[0]
+
+				if _, err := os.Stat(pkg); err != nil {
+					getPkg = pkg
+					buildPkg, _, _ = strings.Cut(pkg, "@")
+					buildDir = output
+				} else {
+					buildPkg = pkg
+				}
+			}
+
+			// package is remote, create temporary module
+			if getPkg != "" {
+				// go mod init
+				cmdModInit := exec.Command("go", "mod", "init", "wasmserve.local")
+				cmdModInit.Env = append(os.Environ(), "GOOS=js", "GOARCH=wasm")
+				cmdModInit.Dir = output
+				out, err := cmdModInit.CombinedOutput()
+				if err != nil {
+					log.Print(err)
+					log.Print(string(out))
+					http.Error(w, string(out), http.StatusInternalServerError)
+					return
+				}
+
+				cmdGet := exec.Command("go", "get", getPkg)
+				cmdGet.Env = append(os.Environ(), "GOOS=js", "GOARCH=wasm")
+				cmdGet.Dir = output
+				out, err = cmdGet.CombinedOutput()
+				if err != nil {
+					log.Print(err)
+					log.Print(string(out))
+					http.Error(w, string(out), http.StatusInternalServerError)
+					return
+				}
+			}
+
 			// go build
 			args := []string{"build", "-o", filepath.Join(output, "main.wasm")}
 			if *flagTags != "" {
@@ -154,15 +201,13 @@ func handle(w http.ResponseWriter, r *http.Request) {
 			if *flagOverlay != "" {
 				args = append(args, "-overlay", *flagOverlay)
 			}
-			if len(flag.Args()) > 0 {
-				args = append(args, flag.Args()[0])
-			} else {
-				args = append(args, ".")
-			}
+
+			args = append(args, buildPkg)
+
 			log.Print("go ", strings.Join(args, " "))
 			cmdBuild := exec.Command("go", args...)
 			cmdBuild.Env = append(os.Environ(), "GOOS=js", "GOARCH=wasm")
-			cmdBuild.Dir = workdir
+			cmdBuild.Dir = buildDir
 			out, err := cmdBuild.CombinedOutput()
 			if err != nil {
 				log.Print(err)
