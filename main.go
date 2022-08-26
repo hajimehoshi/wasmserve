@@ -46,6 +46,7 @@ const indexHTML = `<!DOCTYPE html>
     const go = new Go();
     const result = await WebAssembly.instantiate(src, go.importObject);
     go.argv = {{.Argv}};
+    go.env = {{.Env}};
     go.run(result.instance);
   }
   const reload = await fetch('_wait');
@@ -123,6 +124,15 @@ func handle(w http.ResponseWriter, r *http.Request) {
 				argv = append(argv, `"`+template.JSEscapeString(a)+`"`)
 			}
 			h := strings.ReplaceAll(indexHTML, "{{.Argv}}", "["+strings.Join(argv, ", ")+"]")
+
+			oenv := os.Environ()
+			env := make([]string, 0, len(oenv))
+			for _, e := range oenv {
+				split := strings.SplitN(e, "=", 2)
+				env = append(env, split[0]+`: "`+template.JSEscapeString(split[1])+`"`)
+			}
+			h = strings.ReplaceAll(h, "{{.Env}}", "{"+strings.Join(env, ", ")+"}")
+
 			http.ServeContent(w, r, "index.html", time.Now(), bytes.NewReader([]byte(h)))
 			return
 		}
