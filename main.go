@@ -119,22 +119,24 @@ func handle(w http.ResponseWriter, r *http.Request) {
 		} else if errors.Is(err, fs.ErrNotExist) {
 			fargs := flag.Args()
 			if len(fargs) == 0 {
-				// packages such as flag attempt to use arg0 without checking
+				// packages such as flag attempt to use arg0 without checking len
 				fargs = []string{"."}
 			}
 			argv := make([]string, 0, len(fargs))
 			for _, a := range fargs {
 				argv = append(argv, `"`+template.JSEscapeString(a)+`"`)
 			}
-			h1 := strings.ReplaceAll(indexHTML, "{{.Argv}}", "["+strings.Join(argv, ", ")+"]")
+			h := strings.ReplaceAll(indexHTML, "{{.Argv}}", "["+strings.Join(argv, ", ")+"]")
+
 			oenv := os.Environ()
 			env := make([]string, 0, len(oenv))
 			for _, e := range oenv {
 				split := strings.SplitN(e, "=", 2)
 				env = append(env, split[0]+`: "`+template.JSEscapeString(split[1])+`"`)
 			}
-			h2 := strings.ReplaceAll(h1, "{{.Env}}", "{"+strings.Join(env, ", ")+"}")
-			http.ServeContent(w, r, "index.html", time.Now(), bytes.NewReader([]byte(h2)))
+			h = strings.ReplaceAll(h, "{{.Env}}", "{"+strings.Join(env, ", ")+"}")
+
+			http.ServeContent(w, r, "index.html", time.Now(), bytes.NewReader([]byte(h)))
 			return
 		}
 	case "wasm_exec.js":
