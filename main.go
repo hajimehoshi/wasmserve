@@ -146,7 +146,7 @@ func handle(w http.ResponseWriter, r *http.Request) {
 			return
 		} else if errors.Is(err, fs.ErrNotExist) {
 			// go run
-			args := []string{"run", "-exec", "cat"}
+			args := []string{"run", "-exec", "cp"}
 			if *flagTags != "" {
 				args = append(args, "-tags", *flagTags)
 			}
@@ -158,6 +158,7 @@ func handle(w http.ResponseWriter, r *http.Request) {
 			} else {
 				args = append(args, ".")
 			}
+			args = append(args, filepath.Join(output, "main.wasm"))
 
 			log.Print("go ", strings.Join(args, " "))
 
@@ -172,18 +173,12 @@ func handle(w http.ResponseWriter, r *http.Request) {
 				return
 			}
 
-			f, err := os.Create(filepath.Join(output, "main.wasm"))
+			f, err := os.Open(filepath.Join(output, "main.wasm"))
 			if err != nil {
 				http.Error(w, err.Error(), http.StatusInternalServerError)
 				return
 			}
 			defer f.Close()
-
-			_, err = f.Write(out)
-			if err != nil {
-				http.Error(w, err.Error(), http.StatusInternalServerError)
-				return
-			}
 
 			http.ServeContent(w, r, "main.wasm", time.Now(), f)
 			return
