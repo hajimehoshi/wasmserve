@@ -145,69 +145,25 @@ func handle(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		} else if errors.Is(err, fs.ErrNotExist) {
-			srcDir, err := os.Getwd()
-			if err != nil {
-				http.Error(w, err.Error(), http.StatusInternalServerError)
-				return
-			}
-
-			// determine package name to use for go get and go build
-			getPkg := ""
-			buildPkg := "."
-			buildDir := srcDir
-			if len(flag.Args()) > 0 {
-				pkg := flag.Args()[0]
-
-				if _, err := os.Stat(pkg); err != nil {
-					getPkg = pkg
-					buildPkg = strings.SplitN(pkg, "@", 2)[0]
-					buildDir = output
-				} else {
-					buildPkg = pkg
-				}
-			}
-
-			// package is remote, create temporary module
-			if getPkg != "" {
-				// go mod init
-				cmdModInit := exec.Command("go", "mod", "init", "wasmserve.local")
-				cmdModInit.Env = append(os.Environ(), "GOOS=js", "GOARCH=wasm")
-				cmdModInit.Dir = output
-				out, err := cmdModInit.CombinedOutput()
-				if err != nil {
-					log.Print(err)
-					log.Print(string(out))
-					http.Error(w, string(out), http.StatusInternalServerError)
-					return
-				}
-
-				cmdGet := exec.Command("go", "get", getPkg)
-				cmdGet.Env = append(os.Environ(), "GOOS=js", "GOARCH=wasm")
-				cmdGet.Dir = output
-				out, err = cmdGet.CombinedOutput()
-				if err != nil {
-					log.Print(err)
-					log.Print(string(out))
-					http.Error(w, string(out), http.StatusInternalServerError)
-					return
-				}
-			}
-
-			// go build
-			args := []string{"build", "-o", filepath.Join(output, "main.wasm")}
+			// go run
+			args := []string{"run", "-exec", "cat"}
 			if *flagTags != "" {
 				args = append(args, "-tags", *flagTags)
 			}
 			if *flagOverlay != "" {
 				args = append(args, "-overlay", *flagOverlay)
 			}
-
-			args = append(args, buildPkg)
+			if flag.NArg() > 0 {
+				args = append(args, flag.Args()[0])
+			} else {
+				args = append(args, ".")
+			}
 
 			log.Print("go ", strings.Join(args, " "))
+
 			cmdBuild := exec.Command("go", args...)
 			cmdBuild.Env = append(os.Environ(), "GOOS=js", "GOARCH=wasm")
-			cmdBuild.Dir = buildDir
+			cmdBuild.Dir = "."
 			out, err := cmdBuild.CombinedOutput()
 			if err != nil {
 				log.Print(err)
@@ -215,16 +171,20 @@ func handle(w http.ResponseWriter, r *http.Request) {
 				http.Error(w, string(out), http.StatusInternalServerError)
 				return
 			}
-			if len(out) > 0 {
-				log.Print(string(out))
-			}
 
-			f, err := os.Open(filepath.Join(output, "main.wasm"))
+			f, err := os.Create(filepath.Join(output, "main.wasm"))
 			if err != nil {
 				http.Error(w, err.Error(), http.StatusInternalServerError)
 				return
 			}
 			defer f.Close()
+
+			_, err = f.Write(out)
+			if err != nil {
+				http.Error(w, err.Error(), http.StatusInternalServerError)
+				return
+			}
+
 			http.ServeContent(w, r, "main.wasm", time.Now(), f)
 			return
 		}
