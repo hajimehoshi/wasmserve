@@ -45,6 +45,7 @@ const indexHTML = `<!DOCTYPE html>
     const go = new Go();
     const result = await WebAssembly.instantiate(src, go.importObject);
     go.argv = {{.Argv}};
+    go.env = {{.Env}};
     go.run(result.instance);
   }
   const reload = await fetch('_wait');
@@ -117,12 +118,23 @@ func handle(w http.ResponseWriter, r *http.Request) {
 			return
 		} else if errors.Is(err, fs.ErrNotExist) {
 			fargs := flag.Args()
+			if len(fargs) == 0 {
+				// packages such as flag attempt to use arg0 without checking
+				fargs = []string{"."}
+			}
 			argv := make([]string, 0, len(fargs))
 			for _, a := range fargs {
 				argv = append(argv, `"`+template.JSEscapeString(a)+`"`)
 			}
-			h := strings.ReplaceAll(indexHTML, "{{.Argv}}", "["+strings.Join(argv, ", ")+"]")
-			http.ServeContent(w, r, "index.html", time.Now(), bytes.NewReader([]byte(h)))
+			h1 := strings.ReplaceAll(indexHTML, "{{.Argv}}", "["+strings.Join(argv, ", ")+"]")
+			oenv := os.Environ()
+			env := make([]string, 0, len(oenv))
+			for _, e := range oenv {
+				split := strings.SplitN(e, "=", 2)
+				env = append(env, split[0]+`: "`+template.JSEscapeString(split[1])+`"`)
+			}
+			h2 := strings.ReplaceAll(h1, "{{.Env}}", "{"+strings.Join(env, ", ")+"}")
+			http.ServeContent(w, r, "index.html", time.Now(), bytes.NewReader([]byte(h2)))
 			return
 		}
 	case "wasm_exec.js":
