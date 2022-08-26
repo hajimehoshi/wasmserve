@@ -224,23 +224,23 @@ func notifyWaiters(w http.ResponseWriter, r *http.Request) {
 func main() {
 	flag.Parse()
 	if os.Getenv("WASMSERVE") == "cp" {
-		binary := flag.Args()[0]
-		output := flag.Args()[1]
+		in := flag.Args()[0]
+		out := flag.Args()[1]
 
-		binf, err := os.Open(binary)
+		inf, err := os.Open(in)
 		if err != nil {
-			log.Fatalln("open binary", err)
+			log.Fatalln("open input", err)
 		}
-		defer binf.Close()
+		defer inf.Close()
 
-		outf, err := os.Create(output)
+		outf, err := os.Create(out)
 		if err != nil {
 			log.Fatalln("create output", err)
 		}
 		defer outf.Close()
 
-		if _, err := io.Copy(outf, binf); err != nil {
-			log.Fatalln("copy binary to output", err)
+		if _, err := io.Copy(outf, inf); err != nil {
+			log.Fatalln("copy input to output", err)
 		}
 
 		return
