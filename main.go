@@ -118,9 +118,13 @@ func handle(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		} else if errors.Is(err, fs.ErrNotExist) {
-			fargs := flag.Args()
+			firstArg := filepath.Join(output, "main.wasm")
+			fargs := make([]string, flag.NArg())
+			copy(fargs, flag.Args())
 			if len(fargs) == 0 {
-				fargs = []string{filepath.Join(output, "main.wasm")}
+				fargs = append(fargs, firstArg)
+			} else {
+				fargs[0] = firstArg
 			}
 			argv := make([]string, 0, len(fargs))
 			for _, a := range fargs {
