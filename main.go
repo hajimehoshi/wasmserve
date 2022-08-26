@@ -18,6 +18,7 @@ import (
 	"bytes"
 	"errors"
 	"flag"
+	"io"
 	"io/fs"
 	"io/ioutil"
 	"log"
@@ -149,7 +150,13 @@ func handle(w http.ResponseWriter, r *http.Request) {
 			// This is to support path@version syntax.
 			// A combination of GOBIN and `go install` would not work due to:
 			// go: cannot install cross-compiled binaries when GOBIN is set
-			args := []string{"run", "-exec", "cp"}
+			exc, err := os.Executable()
+			if err != nil {
+				log.Print(err)
+				http.Error(w, err.Error(), http.StatusInternalServerError)
+				return
+			}
+			args := []string{"run", "-exec", exc}
 			if *flagTags != "" {
 				args = append(args, "-tags", *flagTags)
 			}
@@ -164,7 +171,7 @@ func handle(w http.ResponseWriter, r *http.Request) {
 			args = append(args, filepath.Join(output, "main.wasm"))
 			log.Print("go ", strings.Join(args, " "))
 			cmdRun := exec.Command("go", args...)
-			cmdRun.Env = append(os.Environ(), "GOOS=js", "GOARCH=wasm")
+			cmdRun.Env = append(os.Environ(), "GOOS=js", "GOARCH=wasm", "WASMSERVE=cp")
 			cmdRun.Dir = "."
 			out, err := cmdRun.CombinedOutput()
 			if err != nil {
@@ -216,6 +223,29 @@ func notifyWaiters(w http.ResponseWriter, r *http.Request) {
 
 func main() {
 	flag.Parse()
+	if os.Getenv("WASMSERVE") == "cp" {
+		in := flag.Args()[0]
+		out := flag.Args()[1]
+
+		inf, err := os.Open(in)
+		if err != nil {
+			log.Fatalln("open input", err)
+		}
+		defer inf.Close()
+
+		outf, err := os.Create(out)
+		if err != nil {
+			log.Fatalln("create output", err)
+		}
+		defer outf.Close()
+
+		if _, err := io.Copy(outf, inf); err != nil {
+			log.Fatalln("copy input to output", err)
+		}
+
+		return
+	}
+
 	http.HandleFunc("/", handle)
 	log.Fatal(http.ListenAndServe(*flagHTTP, nil))
 }
