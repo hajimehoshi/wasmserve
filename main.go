@@ -152,8 +152,9 @@ func handle(w http.ResponseWriter, r *http.Request) {
 			// go: cannot install cross-compiled binaries when GOBIN is set
 			exc, err := os.Executable()
 			if err != nil {
-				// attempt to invoke by common name
-				exc = "wasmserve"
+				log.Print(err)
+				http.Error(w, err.Error(), http.StatusInternalServerError)
+				return
 			}
 			args := []string{"run", "-exec", exc}
 			if *flagTags != "" {
