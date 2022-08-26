@@ -94,7 +94,6 @@ func handle(w http.ResponseWriter, r *http.Request) {
 
 	upath := r.URL.Path[1:]
 	fpath := path.Base(upath)
-	workdir := "."
 
 	if !strings.HasSuffix(r.URL.Path, "/") {
 		fi, err := os.Stat(fpath)
@@ -146,24 +145,28 @@ func handle(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		} else if errors.Is(err, fs.ErrNotExist) {
-			// go build
-			args := []string{"build", "-o", filepath.Join(output, "main.wasm")}
+			// `go run -exec cp <pkg> <output>` is used instead of the equivalent `go build -o <output> <pkg>`
+			// This is to support path@version syntax.
+			// A combination of GOBIN and `go install` would not work due to:
+			// go: cannot install cross-compiled binaries when GOBIN is set
+			args := []string{"run", "-exec", "cp"}
 			if *flagTags != "" {
 				args = append(args, "-tags", *flagTags)
 			}
 			if *flagOverlay != "" {
 				args = append(args, "-overlay", *flagOverlay)
 			}
-			if len(flag.Args()) > 0 {
+			if flag.NArg() > 0 {
 				args = append(args, flag.Args()[0])
 			} else {
 				args = append(args, ".")
 			}
+			args = append(args, filepath.Join(output, "main.wasm"))
 			log.Print("go ", strings.Join(args, " "))
-			cmdBuild := exec.Command("go", args...)
-			cmdBuild.Env = append(os.Environ(), "GOOS=js", "GOARCH=wasm")
-			cmdBuild.Dir = workdir
-			out, err := cmdBuild.CombinedOutput()
+			cmdRun := exec.Command("go", args...)
+			cmdRun.Env = append(os.Environ(), "GOOS=js", "GOARCH=wasm")
+			cmdRun.Dir = "."
+			out, err := cmdRun.CombinedOutput()
 			if err != nil {
 				log.Print(err)
 				log.Print(string(out))
@@ -180,6 +183,7 @@ func handle(w http.ResponseWriter, r *http.Request) {
 				return
 			}
 			defer f.Close()
+
 			http.ServeContent(w, r, "main.wasm", time.Now(), f)
 			return
 		}
