@@ -160,7 +160,7 @@ func handle(w http.ResponseWriter, r *http.Request) {
 
 				if _, err := os.Stat(pkg); err != nil {
 					getPkg = pkg
-					buildPkg, _, _ = strings.Cut(pkg, "@")
+					buildPkg = strings.SplitN(pkg, "@", 2)[0]
 					buildDir = output
 				} else {
 					buildPkg = pkg
