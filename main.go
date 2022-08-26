@@ -32,11 +32,13 @@ import (
 	"time"
 )
 
+const mainWasm = "main.wasm"
+
 const indexHTML = `<!DOCTYPE html>
 <script src="wasm_exec.js"></script>
 <script>
 (async () => {
-  const resp = await fetch('main.wasm');
+  const resp = await fetch({{.MainWasm}});
   if (!resp.ok) {
     const pre = document.createElement('pre');
     pre.innerText = await resp.text();
@@ -118,7 +120,7 @@ func handle(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		} else if errors.Is(err, fs.ErrNotExist) {
-			firstArg := filepath.Join(output, "main.wasm")
+			firstArg := filepath.Join(output, mainWasm)
 			fargs := make([]string, flag.NArg())
 			copy(fargs, flag.Args())
 			if len(fargs) == 0 {
@@ -140,6 +142,8 @@ func handle(w http.ResponseWriter, r *http.Request) {
 			}
 			h = strings.ReplaceAll(h, "{{.Env}}", "{"+strings.Join(env, ", ")+"}")
 
+			h = strings.ReplaceAll(h, "{{.MainWasm}}", `"`+template.JSEscapeString(mainWasm)+`"`)
+
 			http.ServeContent(w, r, "index.html", time.Now(), bytes.NewReader([]byte(h)))
 			return
 		}
@@ -158,7 +162,7 @@ func handle(w http.ResponseWriter, r *http.Request) {
 			http.ServeFile(w, r, f)
 			return
 		}
-	case "main.wasm":
+	case mainWasm:
 		if _, err := os.Stat(fpath); err != nil && !errors.Is(err, fs.ErrNotExist) {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
@@ -185,7 +189,7 @@ func handle(w http.ResponseWriter, r *http.Request) {
 			} else {
 				args = append(args, ".")
 			}
-			args = append(args, filepath.Join(output, "main.wasm"))
+			args = append(args, filepath.Join(output, mainWasm))
 			log.Print("go ", strings.Join(args, " "))
 			cmdRun := exec.Command("go", args...)
 			cmdRun.Env = append(os.Environ(), "GOOS=js", "GOARCH=wasm", "WASMSERVE=cp")
@@ -201,14 +205,14 @@ func handle(w http.ResponseWriter, r *http.Request) {
 				log.Print(string(out))
 			}
 
-			f, err := os.Open(filepath.Join(output, "main.wasm"))
+			f, err := os.Open(filepath.Join(output, mainWasm))
 			if err != nil {
 				http.Error(w, err.Error(), http.StatusInternalServerError)
 				return
 			}
 			defer f.Close()
 
-			http.ServeContent(w, r, "main.wasm", time.Now(), f)
+			http.ServeContent(w, r, mainWasm, time.Now(), f)
 			return
 		}
 	case "_wait":
