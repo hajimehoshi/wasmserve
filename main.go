@@ -138,7 +138,7 @@ func handle(w http.ResponseWriter, r *http.Request) {
 			env := make([]string, 0, len(oenv))
 			for _, e := range oenv {
 				split := strings.SplitN(e, "=", 2)
-				env = append(env, split[0]+`: "`+template.JSEscapeString(split[1])+`"`)
+				env = append(env, `"`+template.JSEscapeString(split[0])+`": "`+template.JSEscapeString(split[1])+`"`)
 			}
 			h = strings.ReplaceAll(h, "{{.Env}}", "{"+strings.Join(env, ", ")+"}")
 
