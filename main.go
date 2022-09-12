@@ -18,9 +18,7 @@ import (
 	"bytes"
 	"errors"
 	"flag"
-	"io"
 	"io/fs"
-	"io/ioutil"
 	"log"
 	"net/http"
 	"os"
@@ -77,7 +75,7 @@ func ensureTmpOutputDir() (string, error) {
 		return tmpOutputDir, nil
 	}
 
-	tmp, err := ioutil.TempDir("", "")
+	tmp, err := os.MkdirTemp("", "")
 	if err != nil {
 		return "", err
 	}
@@ -167,42 +165,9 @@ func handle(w http.ResponseWriter, r *http.Request) {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
 		} else if errors.Is(err, fs.ErrNotExist) {
-			// `go run -exec cp <pkg> <output>` is used instead of the equivalent `go build -o <output> <pkg>`
-			// This is to support path@version syntax.
-			// A combination of GOBIN and `go install` would not work due to:
-			// go: cannot install cross-compiled binaries when GOBIN is set
-			exc, err := os.Executable()
-			if err != nil {
-				log.Print(err)
+			if err := goBuild(filepath.Join(output, mainWasm)); err != nil {
 				http.Error(w, err.Error(), http.StatusInternalServerError)
 				return
-			}
-			args := []string{"run", "-exec", exc}
-			if *flagTags != "" {
-				args = append(args, "-tags", *flagTags)
-			}
-			if *flagOverlay != "" {
-				args = append(args, "-overlay", *flagOverlay)
-			}
-			if flag.NArg() > 0 {
-				args = append(args, flag.Args()[0])
-			} else {
-				args = append(args, ".")
-			}
-			args = append(args, filepath.Join(output, mainWasm))
-			log.Print("go ", strings.Join(args, " "))
-			cmdRun := exec.Command("go", args...)
-			cmdRun.Env = append(os.Environ(), "GOOS=js", "GOARCH=wasm", "WASMSERVE=cp")
-			cmdRun.Dir = "."
-			out, err := cmdRun.CombinedOutput()
-			if err != nil {
-				log.Print(err)
-				log.Print(string(out))
-				http.Error(w, string(out), http.StatusInternalServerError)
-				return
-			}
-			if len(out) > 0 {
-				log.Print(string(out))
 			}
 
 			f, err := os.Open(filepath.Join(output, mainWasm))
@@ -226,6 +191,84 @@ func handle(w http.ResponseWriter, r *http.Request) {
 	http.ServeFile(w, r, filepath.Join(".", r.URL.Path))
 }
 
+func goBuild(outputPath string) error {
+	target := "."
+	if flag.NArg() > 0 {
+		target = flag.Args()[0]
+	}
+
+	absOutputPath, err := filepath.Abs(outputPath)
+	if err != nil {
+		return err
+	}
+
+	// buildDir is the directory to build the Wasm binary.
+	buildDir := "."
+
+	// If the target path is absolute, an environment with go.mod is required.
+	if !strings.HasPrefix(target, "./") && !strings.HasPrefix(target, ".\\") {
+		dir, err := os.MkdirTemp("", "")
+		if err != nil {
+			return err
+		}
+		defer os.RemoveAll(dir)
+		buildDir = dir
+
+		// Run `go mod init`.
+		cmd := exec.Command("go", "mod", "init", "foo")
+		cmd.Dir = dir
+		out, err := cmd.CombinedOutput()
+		if len(out) > 0 {
+			log.Print(string(out))
+		}
+		if err != nil {
+			return err
+		}
+
+		// Run `go get`.
+		cmd = exec.Command("go", "get", target)
+		cmd.Dir = dir
+		out, err = cmd.CombinedOutput()
+		if len(out) > 0 {
+			log.Print(string(out))
+		}
+		if err != nil {
+			return err
+		}
+
+		// `go build` cannot accept a path with a version. Drop it.
+		if idx := strings.LastIndex(target, "@"); idx >= 0 {
+			target = target[:idx]
+		}
+	}
+
+	// Run `go build`.
+	args := []string{"build"}
+	if *flagTags != "" {
+		args = append(args, "-tags", *flagTags)
+	}
+	if *flagOverlay != "" {
+		args = append(args, "-overlay", *flagOverlay)
+	}
+	args = append(args, "-o", absOutputPath)
+	args = append(args, target)
+	log.Print("go ", strings.Join(args, " "))
+
+	cmd := exec.Command("go", args...)
+	cmd.Env = append(os.Environ(), "GOOS=js", "GOARCH=wasm")
+	cmd.Dir = buildDir
+
+	out, err := cmd.CombinedOutput()
+	if len(out) > 0 {
+		log.Print(string(out))
+	}
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
 func waitForUpdate(w http.ResponseWriter, r *http.Request) {
 	waitChannel <- struct{}{}
 	http.ServeContent(w, r, "", time.Now(), bytes.NewReader(nil))
@@ -244,29 +287,6 @@ func notifyWaiters(w http.ResponseWriter, r *http.Request) {
 
 func main() {
 	flag.Parse()
-	if os.Getenv("WASMSERVE") == "cp" {
-		in := flag.Args()[0]
-		out := flag.Args()[1]
-
-		inf, err := os.Open(in)
-		if err != nil {
-			log.Fatalln("open input", err)
-		}
-		defer inf.Close()
-
-		outf, err := os.Create(out)
-		if err != nil {
-			log.Fatalln("create output", err)
-		}
-		defer outf.Close()
-
-		if _, err := io.Copy(outf, inf); err != nil {
-			log.Fatalln("copy input to output", err)
-		}
-
-		return
-	}
-
 	http.HandleFunc("/", handle)
 	log.Fatal(http.ListenAndServe(*flagHTTP, nil))
 }
