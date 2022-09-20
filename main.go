@@ -18,6 +18,7 @@ import (
 	"bytes"
 	"errors"
 	"flag"
+	"fmt"
 	"io/fs"
 	"log"
 	"net/http"
@@ -258,14 +259,20 @@ func goBuild(outputPath string) error {
 	cmd.Env = append(os.Environ(), "GOOS=js", "GOARCH=wasm")
 	cmd.Dir = buildDir
 
-	out, err := cmd.CombinedOutput()
-	if len(out) > 0 {
-		log.Print(string(out))
-	}
-	if err != nil {
-		return err
-	}
+	var stdout bytes.Buffer
+	var stderr bytes.Buffer
+	cmd.Stdout = &stdout
+	cmd.Stderr = &stderr
 
+	if stdout.Len() > 0 {
+		log.Print(stdout.String())
+	}
+	if stderr.Len() > 0 {
+		log.Print(stderr.String())
+	}
+	if err := cmd.Run(); err != nil {
+		return fmt.Errorf("%s%w", stderr.String(), err)
+	}
 	return nil
 }
 
