@@ -207,7 +207,7 @@ func goBuild(outputPath string) error {
 	buildDir := "."
 
 	// If the target path is absolute, an environment with go.mod is required.
-	if !strings.HasPrefix(target, "./") && !strings.HasPrefix(target, ".\\") {
+	if !strings.HasPrefix(target, "./") && !strings.HasPrefix(target, ".\\") && target != "." {
 		dir, err := os.MkdirTemp("", "")
 		if err != nil {
 			return err
