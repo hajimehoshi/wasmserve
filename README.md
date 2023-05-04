@@ -37,8 +37,7 @@ This will make the browser reload. You can add this command to a build script or
 Running a remote package
 
 ```sh
-# Be careful that `-tags=example` is required to run the below example application.
-wasmserve -tags=example github.com/hajimehoshi/wasmserve/example
+wasmserve github.com/hajimehoshi/wasmserve/example
 ```
 
 And open `http://localhost:8080/` on your browser.
@@ -50,7 +49,7 @@ Running a local package
 ```sh
 git clone https://github.com/hajimehoshi/ebiten # This might take several minutes.
 cd ebiten
-wasmserve -tags=example ./examples/sprites
+wasmserve ./examples/sprites
 ```
 
 And open `http://localhost:8080/` on your browser.
