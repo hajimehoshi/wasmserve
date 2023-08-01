@@ -1,6 +1,6 @@
 # WasmServe
 
-An HTTP server for Wasm testing like `gopherjs serve`
+An HTTP server to test GOOS=js/GOARCH=wasm
 
 ## Installation
 
