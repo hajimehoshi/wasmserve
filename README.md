@@ -2,6 +2,10 @@
 
 An HTTP server to test GOOS=js/GOARCH=wasm
 
+## Sponsors
+
+WasmServe is sponsored by [SourceGraph](https://sourcegraph.com/).
+
 ## Installation
 
 ```sh
