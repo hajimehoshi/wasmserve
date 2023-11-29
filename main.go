@@ -16,9 +16,11 @@ package main
 
 import (
 	"bytes"
+	"encoding/base64"
 	"errors"
 	"flag"
 	"fmt"
+	"io"
 	"io/fs"
 	"log"
 	"net/http"
@@ -158,8 +160,23 @@ func handle(w http.ResponseWriter, r *http.Request) {
 				return
 			}
 			f := filepath.Join(strings.TrimSpace(string(out)), "misc", "wasm", "wasm_exec.js")
-			http.ServeFile(w, r, f)
-			return
+			if _, err := os.Stat(f); err == nil {
+				http.ServeFile(w, r, f)
+				return
+			}
+
+			// wasm_exec.js might not be found when the current Go toolchain is automatically downloaded [1].
+			// In this case, wasm_exec.js should be obtained externally.
+			//
+			// [1] https://go.dev/doc/toolchain
+			content, err := fetchWasmExecJS()
+			if err != nil {
+				log.Print(err)
+				http.Error(w, err.Error(), http.StatusInternalServerError)
+				return
+			}
+
+			http.ServeContent(w, r, "wasm_exec.js", time.Time{}, bytes.NewReader(content))
 		}
 	case mainWasm:
 		if _, err := os.Stat(fpath); err != nil && !errors.Is(err, fs.ErrNotExist) {
@@ -192,12 +209,34 @@ func handle(w http.ResponseWriter, r *http.Request) {
 	http.ServeFile(w, r, filepath.Join(".", r.URL.Path))
 }
 
-func goBuild(outputPath string) error {
-	target := "."
+func target() string {
 	if flag.NArg() > 0 {
-		target = flag.Args()[0]
+		return flag.Args()[0]
+	}
+	return "."
+}
+
+// goVersion fetches the current using Go's version.
+// goVersion is different from runtime.Version(), which returns a Go version for this wasmserve build.
+func goVersion() (string, error) {
+	cmd := exec.Command("go", "list", "-f", "go{{.Module.GoVersion}}", target())
+
+	var stderr bytes.Buffer
+	cmd.Stderr = &stderr
+
+	if stderr.Len() > 0 {
+		log.Print(stderr.String())
 	}
 
+	out, err := cmd.Output()
+	if err != nil {
+		return "", fmt.Errorf("%s%w", stderr.String(), err)
+	}
+
+	return strings.TrimSpace(string(out)), nil
+}
+
+func goBuild(outputPath string) error {
 	absOutputPath, err := filepath.Abs(outputPath)
 	if err != nil {
 		return err
@@ -207,7 +246,8 @@ func goBuild(outputPath string) error {
 	buildDir := "."
 
 	// If the target path is absolute, an environment with go.mod is required.
-	if !strings.HasPrefix(target, "./") && !strings.HasPrefix(target, ".\\") && target != "." {
+	t := target()
+	if !strings.HasPrefix(t, "./") && !strings.HasPrefix(t, ".\\") && t != "." {
 		dir, err := os.MkdirTemp("", "")
 		if err != nil {
 			return err
@@ -227,7 +267,7 @@ func goBuild(outputPath string) error {
 		}
 
 		// Run `go get`.
-		cmd = exec.Command("go", "get", target)
+		cmd = exec.Command("go", "get", t)
 		cmd.Dir = dir
 		out, err = cmd.CombinedOutput()
 		if len(out) > 0 {
@@ -238,8 +278,8 @@ func goBuild(outputPath string) error {
 		}
 
 		// `go build` cannot accept a path with a version. Drop it.
-		if idx := strings.LastIndex(target, "@"); idx >= 0 {
-			target = target[:idx]
+		if idx := strings.LastIndex(t, "@"); idx >= 0 {
+			t = t[:idx]
 		}
 	}
 
@@ -252,7 +292,7 @@ func goBuild(outputPath string) error {
 		args = append(args, "-overlay", *flagOverlay)
 	}
 	args = append(args, "-o", absOutputPath)
-	args = append(args, target)
+	args = append(args, t)
 	log.Print("go ", strings.Join(args, " "))
 
 	cmd := exec.Command("go", args...)
@@ -274,6 +314,29 @@ func goBuild(outputPath string) error {
 		return fmt.Errorf("%s%w", stderr.String(), err)
 	}
 	return nil
+}
+
+func fetchWasmExecJS() ([]byte, error) {
+	v, err := goVersion()
+	if err != nil {
+		return nil, err
+	}
+
+	// TODO: Cache the result.
+
+	url := fmt.Sprintf("https://go.googlesource.com/go/+/refs/tags/%s/misc/wasm/wasm_exec.js?format=TEXT", v)
+	resp, err := http.Get(url)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	content, err := io.ReadAll(base64.NewDecoder(base64.StdEncoding, resp.Body))
+	if err != nil {
+		return nil, err
+	}
+
+	return content, nil
 }
 
 func waitForUpdate(w http.ResponseWriter, r *http.Request) {
