@@ -177,6 +177,7 @@ func handle(w http.ResponseWriter, r *http.Request) {
 			}
 
 			http.ServeContent(w, r, "wasm_exec.js", time.Time{}, bytes.NewReader(content))
+			return
 		}
 	case mainWasm:
 		if _, err := os.Stat(fpath); err != nil && !errors.Is(err, fs.ErrNotExist) {
