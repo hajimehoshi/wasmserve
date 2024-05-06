@@ -387,7 +387,7 @@ func main() {
 		err := server.Shutdown(ctx)
 		if err != nil && !errors.Is(err, context.DeadlineExceeded) {
 			// Error from closing listeners, or context timeout:
-			log.Printf("HTTP server Shutdown: %v", err)
+			log.Printf("Error at server.Shutdown: %v", err)
 		}
 		close(shutdown)
 
