@@ -361,7 +361,6 @@ func notifyWaiters(w http.ResponseWriter, r *http.Request) {
 }
 
 func main() {
-	log.SetFlags(log.Lshortfile | log.Ldate | log.Lmicroseconds)
 	flag.Parse()
 
 	tmpDir, err := ensureTmpOutputDir()
