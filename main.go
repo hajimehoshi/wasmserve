@@ -373,7 +373,7 @@ func main() {
 
 	var server http.Server
 
-	idleConnsClosed := make(chan struct{})
+	shutdown := make(chan struct{})
 	go func() {
 		sigint := make(chan os.Signal, 1)
 		signal.Notify(sigint, os.Interrupt)
@@ -389,7 +389,7 @@ func main() {
 			// Error from closing listeners, or context timeout:
 			log.Printf("HTTP server Shutdown: %v", err)
 		}
-		close(idleConnsClosed)
+		close(shutdown)
 
 		<-sigint
 		// hard exit the second ctrl-c
@@ -407,7 +407,7 @@ func main() {
 		log.Printf("Error running webserver: %v", err)
 	}
 
-	<-idleConnsClosed
+	<-shutdown
 
 	log.Printf("Exiting")
 }
