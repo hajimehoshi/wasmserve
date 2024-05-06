@@ -381,7 +381,7 @@ func main() {
 
 		log.Printf("Shutting down server...")
 
-		// We received an interrupt signal, shut down.
+		// Received an interrupt signal, shut down.
 		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Millisecond)
 		defer cancel()
 		err := server.Shutdown(ctx)
