@@ -245,8 +245,6 @@ func goBuild(outputPath string) error {
 		return err
 	}
 
-	log.Printf("Building wasm output")
-
 	// buildDir is the directory to build the Wasm binary.
 	buildDir := "."
 
