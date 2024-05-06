@@ -16,7 +16,7 @@ package main
 
 import (
 	"bytes"
-    "context"
+	"context"
 	"encoding/base64"
 	"errors"
 	"flag"
@@ -27,7 +27,7 @@ import (
 	"net/http"
 	"os"
 	"os/exec"
-    "os/signal"
+	"os/signal"
 	"path"
 	"path/filepath"
 	"strings"
@@ -245,7 +245,7 @@ func goBuild(outputPath string) error {
 		return err
 	}
 
-    log.Printf("Building wasm output")
+	log.Printf("Building wasm output")
 
 	// buildDir is the directory to build the Wasm binary.
 	buildDir := "."
@@ -361,52 +361,52 @@ func notifyWaiters(w http.ResponseWriter, r *http.Request) {
 }
 
 func main() {
-    log.SetFlags(log.Lshortfile | log.Ldate | log.Lmicroseconds)
+	log.SetFlags(log.Lshortfile | log.Ldate | log.Lmicroseconds)
 	flag.Parse()
 
-    tmpDir, err := ensureTmpOutputDir()
-    if err != nil {
-        log.Fatalf("Failed to create temporary directory: %v", err)
-    }
+	tmpDir, err := ensureTmpOutputDir()
+	if err != nil {
+		log.Fatalf("Failed to create temporary directory: %v", err)
+	}
 
-    defer os.RemoveAll(tmpDir)
+	defer os.RemoveAll(tmpDir)
 
-    var server http.Server
+	var server http.Server
 
-    idleConnsClosed := make(chan struct{})
-    go func() {
-        sigint := make(chan os.Signal, 1)
-        signal.Notify(sigint, os.Interrupt)
-        <-sigint
+	idleConnsClosed := make(chan struct{})
+	go func() {
+		sigint := make(chan os.Signal, 1)
+		signal.Notify(sigint, os.Interrupt)
+		<-sigint
 
-        log.Printf("Shutting down server...")
+		log.Printf("Shutting down server...")
 
-        // We received an interrupt signal, shut down.
-        ctx, cancel := context.WithTimeout(context.Background(), 10 * time.Millisecond)
-        defer cancel()
-        err := server.Shutdown(ctx)
-        if err != nil && !errors.Is(err, context.DeadlineExceeded){
-            // Error from closing listeners, or context timeout:
-            log.Printf("HTTP server Shutdown: %v", err)
-        }
-        close(idleConnsClosed)
+		// We received an interrupt signal, shut down.
+		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Millisecond)
+		defer cancel()
+		err := server.Shutdown(ctx)
+		if err != nil && !errors.Is(err, context.DeadlineExceeded) {
+			// Error from closing listeners, or context timeout:
+			log.Printf("HTTP server Shutdown: %v", err)
+		}
+		close(idleConnsClosed)
 
-        <-sigint
-        // hard exit the second ctrl-c
-        os.Exit(0)
-    }()
+		<-sigint
+		// hard exit the second ctrl-c
+		os.Exit(0)
+	}()
 
-    serveMux := http.NewServeMux()
-    server.Handler = serveMux
+	serveMux := http.NewServeMux()
+	server.Handler = serveMux
 	serveMux.HandleFunc("/", handle)
-    log.Printf("Listening on %v", *flagHTTP)
-    server.Addr = *flagHTTP
-    err = server.ListenAndServe()
-    if err != nil && !errors.Is(err, http.ErrServerClosed) {
-        log.Printf("Error running webserver: %v", err)
-    }
+	log.Printf("Listening on %v", *flagHTTP)
+	server.Addr = *flagHTTP
+	err = server.ListenAndServe()
+	if err != nil && !errors.Is(err, http.ErrServerClosed) {
+		log.Printf("Error running webserver: %v", err)
+	}
 
-    <-idleConnsClosed
+	<-idleConnsClosed
 
-    log.Printf("Exiting")
+	log.Printf("Exiting")
 }
