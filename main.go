@@ -404,7 +404,7 @@ func main() {
 	log.Printf("Listening on %v", *flagHTTP)
 	err = server.ListenAndServe()
 	if err != nil && !errors.Is(err, http.ErrServerClosed) {
-		log.Printf("Error running webserver: %v", err)
+		log.Printf("Error at server.ListenAndServe: %v", err)
 	}
 
 	<-shutdown
