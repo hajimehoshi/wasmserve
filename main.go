@@ -16,6 +16,7 @@ package main
 
 import (
 	"bytes"
+	"context"
 	"encoding/base64"
 	"errors"
 	"flag"
@@ -26,6 +27,7 @@ import (
 	"net/http"
 	"os"
 	"os/exec"
+	"os/signal"
 	"path"
 	"path/filepath"
 	"strings"
@@ -358,6 +360,50 @@ func notifyWaiters(w http.ResponseWriter, r *http.Request) {
 
 func main() {
 	flag.Parse()
-	http.HandleFunc("/", handle)
-	log.Fatal(http.ListenAndServe(*flagHTTP, nil))
+
+	tmpDir, err := ensureTmpOutputDir()
+	if err != nil {
+		log.Fatalf("Failed to create temporary directory: %v", err)
+	}
+
+	defer os.RemoveAll(tmpDir)
+
+	var server http.Server
+
+	shutdown := make(chan struct{})
+	go func() {
+		sigint := make(chan os.Signal, 1)
+		signal.Notify(sigint, os.Interrupt)
+		<-sigint
+
+		log.Printf("Shutting down server...")
+
+		// Received an interrupt signal, shut down.
+		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Millisecond)
+		defer cancel()
+		err := server.Shutdown(ctx)
+		if err != nil && !errors.Is(err, context.DeadlineExceeded) {
+			log.Printf("Error at server.Shutdown: %v", err)
+		}
+		close(shutdown)
+
+		<-sigint
+		// Hard exit on the second ctrl-c.
+		os.Exit(0)
+	}()
+
+	mux := http.NewServeMux()
+	mux.HandleFunc("/", handle)
+	server.Handler = mux
+	server.Addr = *flagHTTP
+
+	log.Printf("Listening on %v", *flagHTTP)
+	err = server.ListenAndServe()
+	if err != nil && !errors.Is(err, http.ErrServerClosed) {
+		log.Printf("Error at server.ListenAndServe: %v", err)
+	}
+
+	<-shutdown
+
+	log.Printf("Exiting")
 }
