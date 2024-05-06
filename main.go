@@ -389,7 +389,7 @@ func main() {
 		close(shutdown)
 
 		<-sigint
-		// hard exit the second ctrl-c
+		// Hard exit the second ctrl-c
 		os.Exit(0)
 	}()
 
