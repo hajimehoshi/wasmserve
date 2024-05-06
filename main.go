@@ -396,11 +396,12 @@ func main() {
 		os.Exit(0)
 	}()
 
-	serveMux := http.NewServeMux()
-	server.Handler = serveMux
-	serveMux.HandleFunc("/", handle)
-	log.Printf("Listening on %v", *flagHTTP)
+	mux := http.NewServeMux()
+	mux.HandleFunc("/", handle)
+	server.Handler = mux
 	server.Addr = *flagHTTP
+
+	log.Printf("Listening on %v", *flagHTTP)
 	err = server.ListenAndServe()
 	if err != nil && !errors.Is(err, http.ErrServerClosed) {
 		log.Printf("Error running webserver: %v", err)
