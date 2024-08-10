@@ -1,3 +1,3 @@
-module github.com/hajimehoshi/wasmserve
+module github.com/nathan-fiscaletti/wasmserve
 
 go 1.16
