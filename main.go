@@ -358,6 +358,10 @@ func notifyWaiters(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+func Run() {
+	main()
+}
+
 func main() {
 	flag.Parse()
 
