@@ -47,9 +47,8 @@ const indexHTML = `<!DOCTYPE html>
     pre.innerText = await resp.text();
     document.body.appendChild(pre);
   } else {
-    const src = await resp.arrayBuffer();
     const go = new Go();
-    const result = await WebAssembly.instantiate(src, go.importObject);
+    const result = await WebAssembly.instantiateStreaming(resp, go.importObject);
     go.argv = {{.Argv}};
     go.env = {{.Env}};
     go.run(result.instance);
