@@ -160,11 +160,13 @@ func handle(w http.ResponseWriter, r *http.Request) {
 				http.Error(w, err.Error(), http.StatusInternalServerError)
 				return
 			}
+			// In Go 1.24 and newer, wasm_exec.js is located in $GOROOT/lib/wasm.
 			f := filepath.Join(strings.TrimSpace(string(out)), "lib", "wasm", "wasm_exec.js")
 			if _, err := os.Stat(f); err == nil {
 				http.ServeFile(w, r, f)
 				return
 			}
+			// In Go 1.23 and older, wasm_exec.js is located in $GOROOT/misc/wasm.
 			f = filepath.Join(strings.TrimSpace(string(out)), "misc", "wasm", "wasm_exec.js")
 			if _, err := os.Stat(f); err == nil {
 				http.ServeFile(w, r, f)
@@ -172,6 +174,8 @@ func handle(w http.ResponseWriter, r *http.Request) {
 			}
 
 			// wasm_exec.js might not be found when the current Go toolchain is automatically downloaded [1].
+			// For example, if go.mod specifies the toolchain version `go1.23.0` and you use Go 1.22,
+			// Go 1.23 is automatically downloaded but without the misc directory.
 			// In this case, wasm_exec.js should be obtained externally.
 			//
 			// [1] https://go.dev/doc/toolchain
