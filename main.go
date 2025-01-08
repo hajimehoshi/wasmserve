@@ -40,7 +40,7 @@ const mainWasm = "main.wasm"
 const indexHTML = `<!DOCTYPE html>
 <script src="wasm_exec.js"></script>
 <script>
-(async () => {
+document.addEventListener('DOMContentLoaded', async () => {
   const resp = await fetch({{.MainWasm}});
   if (!resp.ok) {
     const pre = document.createElement('pre');
@@ -58,7 +58,7 @@ const indexHTML = `<!DOCTYPE html>
   if (reload.ok) {
     location.reload();
   }
-})();
+});
 </script>
 `
 
