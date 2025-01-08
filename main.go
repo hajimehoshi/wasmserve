@@ -160,7 +160,12 @@ func handle(w http.ResponseWriter, r *http.Request) {
 				http.Error(w, err.Error(), http.StatusInternalServerError)
 				return
 			}
-			f := filepath.Join(strings.TrimSpace(string(out)), "misc", "wasm", "wasm_exec.js")
+			f := filepath.Join(strings.TrimSpace(string(out)), "lib", "wasm", "wasm_exec.js")
+			if _, err := os.Stat(f); err == nil {
+				http.ServeFile(w, r, f)
+				return
+			}
+			f = filepath.Join(strings.TrimSpace(string(out)), "misc", "wasm", "wasm_exec.js")
 			if _, err := os.Stat(f); err == nil {
 				http.ServeFile(w, r, f)
 				return
