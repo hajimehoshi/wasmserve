@@ -157,7 +157,12 @@ func handle(w http.ResponseWriter, r *http.Request) {
 			out, err := exec.Command("go", "env", "GOROOT").Output()
 			if err != nil {
 				log.Print(err)
-				http.Error(w, err.Error(), http.StatusInternalServerError)
+				if ee, ok := err.(*exec.ExitError); ok {
+					log.Print(string(ee.Stderr))
+					http.Error(w, fmt.Sprintf("%v\n%s", ee, ee.Stderr), http.StatusInternalServerError)
+				} else {
+					http.Error(w, err.Error(), http.StatusInternalServerError)
+				}
 				return
 			}
 			// In Go 1.24 and newer, wasm_exec.js is located in $GOROOT/lib/wasm.
@@ -232,16 +237,13 @@ func target() string {
 func goVersion() (string, error) {
 	cmd := exec.Command("go", "list", "-f", "go{{.Module.GoVersion}}", target())
 
-	var stderr bytes.Buffer
-	cmd.Stderr = &stderr
-
-	if stderr.Len() > 0 {
-		log.Print(stderr.String())
-	}
-
 	out, err := cmd.Output()
 	if err != nil {
-		return "", fmt.Errorf("%s%w", stderr.String(), err)
+		if ee, ok := err.(*exec.ExitError); ok {
+			log.Print(string(ee.Stderr))
+			return "", fmt.Errorf("wasmserve: 'go list' failed: %w, %s", ee, ee.Stderr)
+		}
+		return "", fmt.Errorf("wasmserve: 'go list' failed: %w", err)
 	}
 
 	return strings.TrimSpace(string(out)), nil
