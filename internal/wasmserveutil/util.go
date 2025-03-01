@@ -17,16 +17,18 @@ func WasmExecJSURL(goVersion string) (string, error) {
 	if len(m) == 0 {
 		return "", fmt.Errorf("wasmserveutil: invalid Go version: %s", goVersion)
 	}
+
+	major, _ := strconv.Atoi(m[1])
 	minor, _ := strconv.Atoi(m[2])
 
 	// go.mod might have a version without `.0` like `go1.22`. This version might not work as a part of URL.
-	if minor >= 22 && m[3] == "" {
+	if (major > 1 || minor >= 22) && m[3] == "" {
 		goVersion += ".0"
 	}
 
 	// The directory name was changed from `misc` to `lib` at Go 1.24.
 	dir := "lib"
-	if minor <= 23 {
+	if major == 1 && minor <= 23 {
 		dir = "misc"
 	}
 

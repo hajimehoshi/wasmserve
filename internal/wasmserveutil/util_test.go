@@ -75,6 +75,36 @@ func TestWasmExecJSURL(t *testing.T) {
 			url:       "https://go.googlesource.com/go/+/refs/tags/go1.24.1/lib/wasm/wasm_exec.js?format=TEXT",
 			error:     false,
 		},
+		{
+			goVersion: "go2.23",
+			url:       "https://go.googlesource.com/go/+/refs/tags/go2.23.0/lib/wasm/wasm_exec.js?format=TEXT",
+			error:     false,
+		},
+		{
+			goVersion: "go2.23.0",
+			url:       "https://go.googlesource.com/go/+/refs/tags/go2.23.0/lib/wasm/wasm_exec.js?format=TEXT",
+			error:     false,
+		},
+		{
+			goVersion: "go2.23.1",
+			url:       "https://go.googlesource.com/go/+/refs/tags/go2.23.1/lib/wasm/wasm_exec.js?format=TEXT",
+			error:     false,
+		},
+		{
+			goVersion: "go2.24",
+			url:       "https://go.googlesource.com/go/+/refs/tags/go2.24.0/lib/wasm/wasm_exec.js?format=TEXT",
+			error:     false,
+		},
+		{
+			goVersion: "go2.24.0",
+			url:       "https://go.googlesource.com/go/+/refs/tags/go2.24.0/lib/wasm/wasm_exec.js?format=TEXT",
+			error:     false,
+		},
+		{
+			goVersion: "go2.24.1",
+			url:       "https://go.googlesource.com/go/+/refs/tags/go2.24.1/lib/wasm/wasm_exec.js?format=TEXT",
+			error:     false,
+		},
 	}
 
 	for _, tc := range testCases {
