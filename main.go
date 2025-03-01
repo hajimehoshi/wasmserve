@@ -1,16 +1,5 @@
-// Copyright 2018 Hajime Hoshi
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+// SPDX-License-Identifier: Apache-2.0
+// SPDX-FileCopyrightText: 2018 Hajime Hoshi
 
 package main
 
@@ -33,6 +22,8 @@ import (
 	"strings"
 	"text/template"
 	"time"
+
+	"github.com/hajimehoshi/wasmserve/internal/wasmserveutil"
 )
 
 const mainWasm = "main.wasm"
@@ -335,9 +326,12 @@ func fetchWasmExecJS() ([]byte, error) {
 		return nil, err
 	}
 
-	// TODO: Cache the result.
+	url, err := wasmserveutil.WasmExecJSURL(v)
+	if err != nil {
+		return nil, err
+	}
 
-	url := fmt.Sprintf("https://go.googlesource.com/go/+/refs/tags/%s/misc/wasm/wasm_exec.js?format=TEXT", v)
+	// TODO: Cache the result.
 	resp, err := http.Get(url)
 	if err != nil {
 		return nil, err
