@@ -24,7 +24,7 @@ func WasmExecJSURL(goVersion string) (string, error) {
 		goVersion += ".0"
 	}
 
-	// The directory name was changed from `misc` to `lib` at Go 1.23.
+	// The directory name was changed from `misc` to `lib` at Go 1.24.
 	dir := "lib"
 	if minor <= 23 {
 		dir = "misc"
